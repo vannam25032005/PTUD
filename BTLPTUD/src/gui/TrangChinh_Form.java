@@ -125,7 +125,7 @@ public class TrangChinh_Form extends JFrame implements ActionListener {
         // Thêm từng trang nhỏ vào pnlContent
         pnlContent.add(new TrangChu_GUI(), "Dashboard");
         pnlContent.add(new QLBanDat_GUI(), "Quản lý bàn đặt");
-        pnlContent.add(new JPanel(), "Quản lý món ăn");
+        pnlContent.add(new QLMonAn_GUI(), "Quản lý món ăn");
         pnlContent.add(new JPanel(), "Quản lý KH");
         pnlContent.add(new NhanVien_GUI(), "Quản lý nhân viên");
         pnlContent.add(new BaoCao_GUI(), "Báo cáo");
