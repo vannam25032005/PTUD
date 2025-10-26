@@ -23,6 +23,11 @@ public class KhachHang {
         this.gioiTinh = gioiTinh;
         this.nhanVien = nhanVien;
     }
+    public KhachHang(String maKH, String hoTenKH, String soDienThoai) {
+        this.maKH = maKH;
+        this.hoTenKH = hoTenKH;
+        this.soDienThoai = soDienThoai;
+    }
 
     // Getters
     public String getMaKH() { return maKH; }
