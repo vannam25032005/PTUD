@@ -1,132 +1,113 @@
 package dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import connectDB.ConnectDB;
+import connectDB.ConnectDB; 
 import entity.KhachHang;
 import entity.TheThanhVien;
 
+import java.sql.*;
+import java.util.ArrayList;
+
 public class TheThanhVien_DAO {
 
-    //  Lấy thẻ theo mã khách hàng
-    public TheThanhVien getTheTheoMaKH(String maKH) {
-        TheThanhVien the = null;
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
+    /**
+     * XÓA: Hàm getAllLoaiHang() đã bị xóa vì không còn ComboBox.
+     */
+    // public ArrayList<String> getAllLoaiHang() throws SQLException { ... }
 
-        try {
-            con = ConnectDB.getConnection();
-            String sql = "SELECT maThe, maKH, diemTichLuy, loaiHang FROM THETHANHVIEN WHERE maKH = ?";
-            stmt = con.prepareStatement(sql);
-            stmt.setString(1, maKH);
-            rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                the = new TheThanhVien();
-                the.setMaThe(rs.getString("maThe"));
-                the.setDiemTichLuy(rs.getInt("diemTichLuy"));
-                the.setLoaiHang(rs.getString("loaiHang"));
-                KhachHang kh = new KhachHang(rs.getString("maKH"));
-                the.setKhachHang(kh);
+    /**
+     * Lấy thẻ thành viên bằng mã khách hàng
+     */
+    public TheThanhVien getTheByMaKH(String maKH) throws SQLException {
+        TheThanhVien ttv = null;
+        Connection con = ConnectDB.getConnection();
+        String sql = "SELECT * FROM THETHANHVIEN WHERE maKH = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maKH);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String maThe = rs.getString("maThe");
+                    int diem = rs.getInt("diemTichLuy");
+                    String loaiHang = rs.getString("loaiHang");
+                    
+                    KhachHang kh = new KhachHang(maKH);
+                    // Dùng constructor, logic trong Entity sẽ tự xử lý
+                    ttv = new TheThanhVien(maThe, kh, diem, loaiHang); 
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try { if (rs != null) rs.close(); } catch (SQLException ignored) {}
-            try { if (stmt != null) stmt.close(); } catch (SQLException ignored) {}
+            throw e;
         }
-        return the;
+        return ttv;
     }
 
-    // Cập nhật điểm & hạng sau khi chi tiêu
-    public boolean capNhatDiemVaHang(String maThe, double tongTienChiTieu) {
-        Connection con = null;
-        PreparedStatement stmt = null;
-        boolean result = false;
-
-        try {
-            con = ConnectDB.getConnection();
-
-            // 1 điểm = 100.000 VNĐ
-            int diemMoi = (int) (tongTienChiTieu / 100_000);
-
-            // Lấy điểm hiện tại
-            int diemHienTai = 0;
-            String sqlSelect = "SELECT diemTichLuy FROM THETHANHVIEN WHERE maThe = ?";
-            stmt = con.prepareStatement(sqlSelect);
-            stmt.setString(1, maThe);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                diemHienTai = rs.getInt("diemTichLuy");
-            }
-            rs.close();
-            stmt.close();
-
-            int tongDiem = diemHienTai + diemMoi;
-            String loaiHang = xacDinhLoaiHang(tongDiem);
-
-            // Cập nhật vào CSDL
-            String sqlUpdate = "UPDATE THETHANHVIEN SET diemTichLuy = ?, loaiHang = ? WHERE maThe = ?";
-            stmt = con.prepareStatement(sqlUpdate);
-            stmt.setInt(1, tongDiem);
-            stmt.setString(2, loaiHang);
-            stmt.setString(3, maThe);
-
-            int n = stmt.executeUpdate();
-            result = n > 0;
+    /**
+     * Thêm thẻ thành viên mới (Không đổi)
+     * Đối tượng ttv truyền vào đã được Entity tính toán loaiHang sẵn
+     */
+    public boolean addTheThanhVien(TheThanhVien ttv) throws SQLException {
+        Connection con = ConnectDB.getConnection();
+        String sql = "INSERT INTO THETHANHVIEN (maThe, maKH, diemTichLuy, loaiHang) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, ttv.getMaThe());
+            ps.setString(2, ttv.getKhachHang().getMaKH());
+            ps.setInt(3, ttv.getDiemTichLuy());
+            ps.setString(4, ttv.getLoaiHang()); // loaiHang này đã được entity tính
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try { if (stmt != null) stmt.close(); } catch (SQLException ignored) {}
-        }
-
-        return result;
-    }
-
-    //  Xác định loại hạng dựa vào điểm
-    public String xacDinhLoaiHang(int diem) {
-        if (diem >= 250) {
-            return "Kim cương";
-        } else if (diem >= 100) {
-            return "Vàng";
-        } else {
-            return "Bạc";
+            throw e;
         }
     }
 
-    //  Lấy phần trăm ưu đãi theo loại hạng
-    public double tinhUuDai(String loaiHang) {
-        switch (loaiHang) {
-            case "Kim cương": return 0.15;
-            case "Vàng": return 0.12;
-            case "Bạc": return 0.10;
-            default: return 0.0;
+    /**
+     * Cập nhật loại hạng thẻ (Không đổi)
+     * Đối tượng ttv truyền vào đã được Entity tính toán loaiHang sẵn
+     */
+    public boolean updateTheThanhVien(TheThanhVien ttv) throws SQLException {
+        Connection con = ConnectDB.getConnection();
+        String sql = "UPDATE THETHANHVIEN SET loaiHang = ?, diemTichLuy = ? WHERE maThe = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, ttv.getLoaiHang()); // loaiHang này đã được entity tính
+            ps.setInt(2, ttv.getDiemTichLuy());
+            ps.setString(3, ttv.getMaThe());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
         }
     }
-    public static void main(String[] args) {
-        TheThanhVien_DAO dao = new TheThanhVien_DAO();
-
-        // ✅ Nhập mã khách hàng có trong database của bạn
-        String maKH = "KH001";
-
-        TheThanhVien the = dao.getTheTheoMaKH(maKH);
-
-        if (the != null) {
-            System.out.println("===== KẾT QUẢ TRUY VẤN =====");
-            System.out.println("Mã thẻ: " + the.getMaThe());
-            System.out.println("Điểm tích lũy: " + the.getDiemTichLuy());
-            System.out.println("Loại hạng: " + the.getLoaiHang());
-
-            if (the.getKhachHang() != null)
-                System.out.println("✅ Liên kết khách hàng OK: " + the.getKhachHang().getMaKH());
-            else
-                System.out.println("❌ Lỗi: Khách hàng đang null!");
-        } else {
-            System.out.println("❌ Không tìm thấy thẻ cho mã khách hàng: " + maKH);
+    
+    // (Các hàm delete... và generateNewMaThe() giữ nguyên)
+    public boolean deleteTheThanhVienByMaKH(String maKH) throws SQLException {
+        Connection con = ConnectDB.getConnection();
+        String sql = "DELETE FROM THETHANHVIEN WHERE maKH = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maKH);
+            ps.executeUpdate(); 
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
         }
+    }
+
+    public String generateNewMaThe() throws SQLException {
+        Connection con = ConnectDB.getConnection();
+        String sql = "SELECT MAX(maThe) FROM THETHANHVIEN";
+        try (PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String maxMaThe = rs.getString(1);
+                if (maxMaThe != null) {
+                    int num = Integer.parseInt(maxMaThe.substring(3)) + 1;
+                    return String.format("TTV%03d", num);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if(e instanceof SQLException) throw (SQLException)e;
+        }
+        return "TTV001";
     }
 }

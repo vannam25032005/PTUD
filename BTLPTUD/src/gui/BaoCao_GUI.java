@@ -30,7 +30,7 @@ public class BaoCao_GUI extends JPanel {
     private JDateChooser txtTuNgay, txtDenNgay;
     private JComboBox<String> cboThongKeTheo;
     private JButton btnLoc;
-    private JTextField txtTimKiemThem;
+   
     
     // Khởi tạo Chart Panel là null
     private ChartPanel chartPanel = null; 
@@ -79,9 +79,7 @@ public class BaoCao_GUI extends JPanel {
 
         cboThongKeTheo = new JComboBox<>(new String[]{"Ngày", "Tháng", "Năm"});
         cboThongKeTheo.setPreferredSize(new Dimension(100, 30));
-        
-        txtTimKiemThem = new JTextField(); 
-        txtTimKiemThem.setPreferredSize(new Dimension(100, 30));
+    
 
         btnLoc = new JButton("Lọc"); 
         btnLoc.setBackground(ACCENT_COLOR);
@@ -96,7 +94,6 @@ public class BaoCao_GUI extends JPanel {
         pnlFilter.add(txtDenNgay);
         pnlFilter.add(new JLabel("Thống kê theo:"));
         pnlFilter.add(cboThongKeTheo);
-        pnlFilter.add(txtTimKiemThem); 
         pnlFilter.add(btnLoc); 
 
         pnlNorth.add(pnlFilter);
@@ -251,33 +248,52 @@ public class BaoCao_GUI extends JPanel {
         DefaultCategoryDataset newDataset = new DefaultCategoryDataset();
         String title, categoryLabel;
         
+        // 1. Thiết lập tiêu đề và nhãn
         if (thongKeTheo.equals("Ngày")) {
              title = "Biểu đồ doanh thu theo ngày";
              categoryLabel = "Ngày";
-             for (int i = 0; i < 7; i++) {
-                 long randomRevenue = ThreadLocalRandom.current().nextLong(5000000, 15000000);
-                 newDataset.addValue(randomRevenue, "Doanh thu", tuNgay.plusDays(i).toString());
-             }
         } else if (thongKeTheo.equals("Tháng")) {
              title = "Biểu đồ doanh thu theo tháng";
              categoryLabel = "Tháng";
-             newDataset.addValue(16000000, "Doanh thu", "Tháng 1");
-             newDataset.addValue(23000000, "Doanh thu", "Tháng 2");
-             newDataset.addValue(26000000, "Doanh thu", "Tháng 3");
-             newDataset.addValue(32000000, "Doanh thu", "Tháng 4");
         } else { // Năm
              title = "Biểu đồ doanh thu theo năm";
              categoryLabel = "Năm";
-             newDataset.addValue(800000000, "Doanh thu", "2023");
-             newDataset.addValue(1200000000, "Doanh thu", "2024");
-             newDataset.addValue(950000000, "Doanh thu", "2025");
+        }
+
+        // 2. Lấy dữ liệu thực từ DAO
+        Map<String, Double> duLieuDoanhThu = baoCaoDAO.getDoanhThuTheoNhom(tuNgay, denNgay, thongKeTheo);
+        
+        // 3. Đổ dữ liệu vào Dataset
+        if (duLieuDoanhThu.isEmpty()) {
+            // Đặt giá trị 0đ nếu không có dữ liệu để biểu đồ không bị lỗi định dạng
+            newDataset.addValue(0, "Doanh thu", "Không có dữ liệu");
+        } else {
+            for (Map.Entry<String, Double> entry : duLieuDoanhThu.entrySet()) {
+                // entry.getKey() là 'yyyy-MM-dd', 'yyyy-MM', hoặc 'yyyy'
+                newDataset.addValue(entry.getValue(), "Doanh thu", entry.getKey());
+            }
         }
         
-        // Cập nhật biểu đồ
+        // 4. Cập nhật biểu đồ
         replaceChartPanel(newDataset, categoryLabel);
         
-        // Cập nhật tiêu đề hiển thị
-        ((JLabel) ((JPanel) pnlChartContainer.getComponent(0)).getComponent(0)).setText(title);
+        // 5. Cập nhật tiêu đề hiển thị
+        // Chỉnh sửa lỗi cú pháp sau: ((JLabel) ((JPanel) pnlChartContainer.getComponent(0)).getComponent(0)).setText(title);
+        // Thay thế bằng cách tìm kiếm Component chứa label:
+        Component[] components = pnlChartContainer.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                Component[] subComponents = ((JPanel) comp).getComponents();
+                for (Component subComp : subComponents) {
+                    if (subComp instanceof JLabel) {
+                        ((JLabel) subComp).setText(title);
+                        break;
+                    }
+                }
+                break; 
+            }
+        }
+
 
         pnlChartContainer.revalidate();
         pnlChartContainer.repaint();
@@ -383,20 +399,21 @@ public class BaoCao_GUI extends JPanel {
 
         return panel;
     }
+    
 
     // ====== TEST FRAME ======
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        JFrame frame = new JFrame("Báo cáo thống kê");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1200, 850); 
-        frame.setLocationRelativeTo(null);
-        frame.add(new BaoCao_GUI());
-        frame.setVisible(true);
-    }
+//    public static void main(String[] args) {
+//        try {
+//            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        JFrame frame = new JFrame("Báo cáo thống kê");
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.setSize(1200, 850); 
+//        frame.setLocationRelativeTo(null);
+//        frame.add(new BaoCao_GUI());
+//        frame.setVisible(true);
+//    }
 }

@@ -235,7 +235,7 @@ public class KhuyenMai_GUI extends JPanel {
             TitledBorder.LEADING, 
             TitledBorder.TOP, 
             new Font("Segoe UI", Font.PLAIN, 12), 
-            Color.GRAY)); 
+            Color.BLACK)); 
             
         pnlField.add(component, BorderLayout.CENTER);
         parent.add(pnlField, gbc);
