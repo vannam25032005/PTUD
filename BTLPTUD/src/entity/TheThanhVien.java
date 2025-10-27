@@ -1,24 +1,39 @@
 package entity;
 
-import javax.management.RuntimeErrorException;
 
 public class TheThanhVien {
     private String maThe;
-    private KhachHang khachHang; // maKH
+    private KhachHang khachHang; 
     private int diemTichLuy;
+    private String loaiHang;
+    public TheThanhVien() {}
 
     public TheThanhVien(String maThe) {
         super();
         this.maThe = maThe;
     }
 
-    public TheThanhVien(String maThe, KhachHang khachHang, int diemTichLuy) {
-        this.maThe = maThe;
-        this.khachHang = khachHang;
-        this.diemTichLuy = diemTichLuy;
-    }
+	
+    public TheThanhVien(String maThe, KhachHang khachHang, int diemTichLuy, String loaiHang) {
+		super();
+		this.maThe = maThe;
+		this.khachHang = khachHang;
+		this.diemTichLuy = diemTichLuy;
+		this.loaiHang = loaiHang;
+	}
 
-    // Getters
+
+	public String getLoaiHang() {
+		return loaiHang;
+	}
+
+
+	public void setLoaiHang(String loaiHang) {
+		this.loaiHang = loaiHang;
+	}
+
+
+	// Getters
     public String getMaThe() { return maThe; }
     public KhachHang getKhachHang() { return khachHang; }
     public int getDiemTichLuy() { return diemTichLuy; }
