@@ -49,6 +49,7 @@ public class TrangChinh_Form extends JFrame implements ActionListener {
             "Quản lý món ăn",
             "Quản lý KH",
             "Quản lý nhân viên",
+            "Quản lý hóa đơn",
             "Báo cáo",
             "Khuyến mãi",
             
@@ -60,6 +61,7 @@ public class TrangChinh_Form extends JFrame implements ActionListener {
             "src/image/monan.png",
             "src/image/khachhang.png",
             "src/image/nhanvien.png",
+            "src/image/invoice.png",
             "src/image/baocao.png",
             "src/image/khuyenmai.png",
         
@@ -130,6 +132,8 @@ public class TrangChinh_Form extends JFrame implements ActionListener {
         pnlContent.add(new NhanVien_GUI(), "Quản lý nhân viên");
         pnlContent.add(new BaoCao_GUI(), "Báo cáo");
         pnlContent.add(new KhuyenMai_GUI(), "Khuyến mãi");
+        pnlContent.add(new HoaDon_GUI(), "Quản lý hóa đơn");
+        
 
         
       
@@ -145,7 +149,7 @@ public class TrangChinh_Form extends JFrame implements ActionListener {
 
 	
 public static void main(String[] args) {
-	new DangNhap_GUI().setVisible(true);;
+	new TrangChinh_Form().setVisible(true);;
 }
 
 	@Override

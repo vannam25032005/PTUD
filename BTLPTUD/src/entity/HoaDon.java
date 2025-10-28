@@ -17,6 +17,8 @@ public class HoaDon {
     private Ban ban;                 // maBan (NOT NULL)
     private BanDat banDat;           // maDatBan (Có thể NULL)
     private KhuyenMai khuyenMai;     // maKM (Có thể NULL)
+    
+    public HoaDon() {}
 
     public HoaDon(String maHoaDon) {
         super();

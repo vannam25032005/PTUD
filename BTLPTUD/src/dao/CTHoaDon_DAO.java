@@ -12,13 +12,7 @@ import java.util.ArrayList;
 
 public class CTHoaDon_DAO {
 
-    /**
-     * Thêm một Chi tiết hóa đơn mới vào cơ sở dữ liệu.
-     * Sử dụng Connection (con) được truyền vào để đảm bảo chạy trong cùng một Transaction.
-     * @param ct Chi tiết hóa đơn cần thêm.
-     * @param con Connection dùng chung cho Transaction của HoaDon.
-     * @return true nếu thêm thành công.
-     */
+    
     public boolean themCTHoaDon(CT_HoaDon ct, Connection con) throws SQLException {
         // Cần đảm bảo maHD và maMon không NULL
         if (ct.getHoaDon() == null || ct.getMonAn() == null) {
@@ -35,42 +29,75 @@ public class CTHoaDon_DAO {
         }
     }
 
-    /**
-     * Lấy danh sách chi tiết hóa đơn (CT_HoaDon) dựa trên mã hóa đơn.
-     * Cần JOIN với MONAN để lấy giaMonAn cho việc tính toán thành tiền/tổng tiền.
-     * @param maHD Mã hóa đơn cần truy vấn.
-     * @return List<CT_HoaDon>
-     */
-    public ArrayList<CT_HoaDon> layDSCTHoaDonTheoMaHD(String maHD) {
+    public ArrayList<CT_HoaDon> layDSCTHoaDonTheoMaHD(Connection con, String maHD) throws SQLException {
         ArrayList<CT_HoaDon> danhSachCT = new ArrayList<>();
-        String sql = "SELECT CTHD.maHD, CTHD.maMon, CTHD.soLuong, MA.tenMon, MA.giaMon " +
-                     "FROM CT_HOADON CTHD JOIN MONAN MA ON CTHD.maMon = MA.maMon " +
-                     "WHERE CTHD.maHD = ?";
+        String sql = "SELECT CTHD.maHD, CTHD.maMon, CTHD.soLuong, MA.tenMon, MA.giaMon "
+                   + "FROM CT_HoaDon CTHD JOIN MONAN MA ON CTHD.maMon = MA.maMon "
+                   + "WHERE CTHD.maHD = ?";
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maHD);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    MonAn monAn = new MonAn(rs.getString("maMon"));
+                    monAn.setTenMonAn(rs.getString("tenMon"));
+                    monAn.setGiaMonAn(rs.getDouble("giaMon"));
+
+                    HoaDon hoaDon = new HoaDon(rs.getString("maHD"));
+                    CT_HoaDon ct = new CT_HoaDon(hoaDon, monAn, rs.getInt("soLuong"));
+
+                    danhSachCT.add(ct);
+                }
+            }
+        }
+        return danhSachCT;
+    }
+
+ // Trong CTHoaDon_DAO.java
+    public CT_HoaDon layCTHoaDon(String maHD, String maMon) throws SQLException {
+        CT_HoaDon ct = null;
+        String sql = "SELECT maHD, maMon, soLuong FROM CT_HOADON WHERE maHD = ? AND maMon = ?";
         
         try (Connection con = ConnectDB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             
             ps.setString(1, maHD);
+            ps.setString(2, maMon);
             
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    // 1. Tạo Entity MonAn ảo (chỉ cần MaMon, TenMon và GiaMonAn)
-                    MonAn monAn = new MonAn(rs.getString("maMon"));
-                    monAn.setTenMonAn(rs.getString("tenMon"));
-                    monAn.setGiaMonAn(rs.getDouble("giaMon"));
-                    
-                    // 2. Tạo Entity HoaDon ảo (chỉ cần MaHD)
-                    HoaDon hoaDon = new HoaDon(rs.getString("maHD"));
-                    
-                    // 3. Tạo CT_HoaDon
-                    CT_HoaDon ct = new CT_HoaDon(hoaDon, monAn, rs.getInt("soLuong"));
-                    
-                    danhSachCT.add(ct);
+                if (rs.next()) {
+                    // Chỉ cần tạo Entity ảo (MaHD, MaMon)
+                    HoaDon hd = new HoaDon(rs.getString("maHD"));
+                    MonAn ma = new MonAn(rs.getString("maMon"));
+                    ct = new CT_HoaDon(hd, ma, rs.getInt("soLuong"));
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-        return danhSachCT;
+        return ct;
+    }
+ // Trong CTHoaDon_DAO.java
+    public boolean capNhatSoLuongCTHoaDon(String maHD, String maMon, int soLuongMoi) throws SQLException {
+        String sql = "UPDATE CT_HOADON SET soLuong = ? WHERE maHD = ? AND maMon = ?";
+        try (Connection con = ConnectDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            
+            ps.setInt(1, soLuongMoi);
+            ps.setString(2, maHD);
+            ps.setString(3, maMon);
+            
+            return ps.executeUpdate() > 0;
+        }
+    }
+ // Trong CTHoaDon_DAO.java
+    public boolean xoaCTHoaDon(String maHD, String maMon) throws SQLException {
+        String sql = "DELETE FROM CT_HOADON WHERE maHD = ? AND maMon = ?";
+        try (Connection con = ConnectDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            
+            ps.setString(1, maHD);
+            ps.setString(2, maMon);
+            
+            return ps.executeUpdate() > 0;
+        }
     }
 }

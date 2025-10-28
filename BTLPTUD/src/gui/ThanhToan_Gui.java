@@ -10,6 +10,16 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 // ------------------------------------
 
+import connectDB.ConnectDB;
+import dao.HoaDon_DAO;
+import entity.Ban;
+import entity.BanDat;
+import entity.CT_HoaDon;
+import entity.HoaDon;
+import entity.KhuyenMai;
+import entity.NhanVien;
+import entity.TheThanhVien;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -20,10 +30,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
 
-public class ThanhToan_GUI extends JPanel {
+public class ThanhToan_Gui extends JPanel {
     private NumberFormat dinhDangTien;
     
     
@@ -47,13 +58,17 @@ public class ThanhToan_GUI extends JPanel {
     
     private double giamGia = 0; 
     private double tienCoc = 0; 
-    private double tongTienSauGiamGia = 0; 
+    private double tongTienSauGiamGia = 0;
+
+
+	private Ban ban; 
     
-    public ThanhToan_GUI(Map<String, Integer> gioHangXacNhan, Map<String, Integer> bangGia, double tongTienHoaDon) {
+    public ThanhToan_Gui(Map<String, Integer> gioHangXacNhan, Map<String, Integer> bangGia, double tongTienHoaDon, Ban ban) {
         this.gioHangXacNhan = gioHangXacNhan;
         this.bangGia = bangGia;
         this.tongTienHoaDonBanDau = tongTienHoaDon;
-        this.tongTienSauGiamGia = tongTienHoaDon; 
+        this.tongTienSauGiamGia = tongTienHoaDon;
+        this.ban = ban;
         
         dinhDangTien = NumberFormat.getInstance(new Locale("vi", "VN"));
 
@@ -72,7 +87,7 @@ public class ThanhToan_GUI extends JPanel {
         lblBack.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                ((JFrame) SwingUtilities.getWindowAncestor(ThanhToan_GUI.this)).dispose();
+                ((JFrame) SwingUtilities.getWindowAncestor(ThanhToan_Gui.this)).dispose();
             }
         });
         
@@ -561,7 +576,7 @@ public class ThanhToan_GUI extends JPanel {
         } else {
             capNhatTienThua();
         }
-    }
+    }	
     
     // PHƯƠNG THỨC ĐÃ SỬA LỖI: Gọi hàm chonHinhThucThanhToan mới với resetTienDua = false
     private void xuLyGoiY(double soTien) {
@@ -573,28 +588,57 @@ public class ThanhToan_GUI extends JPanel {
     
     private void inHoaDon() {
         if (soTienKhachDua < tongTienSauGiamGia && hinhThucThanhToan.equals("Tiền mặt")) {
-            JOptionPane.showMessageDialog(this, "Số tiền khách đưa không đủ!", "Lỗi Thanh Toán", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Số tiền khách đưa không đủ!", 
+                    "Lỗi Thanh Toán", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String thongBao = String.format(
-            "Xác nhận thanh toán thành công!\n" +
-            "Tổng tiền HĐ: %s VND\n" +
-            "Giảm giá: %s VND\n" +
-            "Hình thức: %s\n" +
-            "Khách đưa: %s VND\n" +
-            "Tiền thừa: %s VND",
-            dinhDangTien.format(tongTienSauGiamGia),
-            dinhDangTien.format(giamGia),
-            hinhThucThanhToan,
-            dinhDangTien.format(soTienKhachDua),
-            dinhDangTien.format(soTienKhachDua - tongTienSauGiamGia)
-        );
+        try {
+            HoaDon_DAO hoaDonDAO = new HoaDon_DAO();
 
-        JOptionPane.showMessageDialog(this, thongBao, "In Hóa Đơn", JOptionPane.INFORMATION_MESSAGE);
+            // ⭐ Lấy mã hóa đơn tự tăng từ DB
+            String maHDmoi = hoaDonDAO.layMaHDTiepTheo();
+
+            // Tạm thời gán cứng NV001
+            NhanVien nv = new NhanVien("NV001");
+
+            HoaDon hd = new HoaDon();
+            hd.setDanhSachChiTietHoaDon(new ArrayList<>());
+            hd.setMaHoaDon(maHDmoi);
+            hd.setNhanVien(nv);
+            hd.setBan(this.ban);
+            hd.setNgayLap(LocalDateTime.now());
+
+            // ❌ Chưa có chức năng - gán null trước
+            hd.setBanDat(null);
+            hd.setKhuyenMai(null);
+            hd.setTheThanhVien(null);
+
+//            // ✅ Tổng tiền + trạng thái
+//            hd.setTongTien(tongTienSauGiamGia);
+//            hd.setTrangThaiThanhToan("Đã thanh toán");
+
+            boolean kq = hoaDonDAO.themHoaDon(hd);
+
+            if (kq) {
+            	
+                JOptionPane.showMessageDialog(this, 
+                    " Hóa đơn " + maHDmoi + " đã được lưu vào CSDL!");
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    " Lưu hóa đơn thất bại!");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, 
+                "Lỗi khi tạo hóa đơn: " + e.getMessage());
+        }
 
         ((JFrame) SwingUtilities.getWindowAncestor(this)).dispose();
     }
+
+
 
     // cập nhật giao  diện
   
@@ -692,6 +736,7 @@ public class ThanhToan_GUI extends JPanel {
         }
     }
     
+    
     // --- Phương thức main (để chạy thử) ---
     public static void main(String[] args) {
         JFrame f = new JFrame("Thanh toán");
@@ -711,8 +756,9 @@ public class ThanhToan_GUI extends JPanel {
         bangGiaTest.put("Bánh mì thêm", 7000); 
         
         double tongTienTest = (2*100000) + (4*80000) + (2*7000); // 534,000 VND
+        Ban banTest = new Ban("B01", "Bàn lớn", 6, "Tầng 1", "Đang sử dụng");
         
-        f.setContentPane(new ThanhToan_GUI(gioHangXacNhanTest, bangGiaTest, tongTienTest));
+        f.setContentPane(new ThanhToan_Gui(gioHangXacNhanTest, bangGiaTest, tongTienTest,banTest));
         f.setVisible(true);
     }
 }

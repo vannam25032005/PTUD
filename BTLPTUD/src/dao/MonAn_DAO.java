@@ -339,4 +339,22 @@ public class MonAn_DAO {
         }
         return dsLoai;
     }
+    public MonAn getMonAnById(String maMon) {
+        MonAn monAn = null;
+        Connection con = ConnectDB.getConnection();
+        String sql = "SELECT maMon, tenMon, loaiMon, giaMon, hinhAnh, maQL FROM MONAN WHERE maMon = ?";
+        
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maMon);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    monAn = createMonAnFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi tìm món ăn theo mã: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return monAn;
+    }
 }

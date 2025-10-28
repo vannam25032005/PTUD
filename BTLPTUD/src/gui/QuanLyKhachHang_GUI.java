@@ -645,20 +645,5 @@ public class QuanLyKhachHang_GUI extends JPanel {
      * Main method to launch the QuanLyKhachHang panel in a JFrame.
      * Establishes DB connection first.
      */
-    public static void main(String[] args) {
-        // Establish database connection before creating GUI
-        ConnectDB.connect();
-
-        // Run the GUI on the Event Dispatch Thread
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Quản lý khách hàng - Final Version");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-            QuanLyKhachHang_GUI panel = new QuanLyKhachHang_GUI();
-
-            frame.add(panel);
-            frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Full screen
-            frame.setVisible(true);
-        });
-    }
+    
 }

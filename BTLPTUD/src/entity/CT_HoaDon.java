@@ -1,5 +1,7 @@
 package entity;
 
+import java.util.List;
+
 import javax.management.RuntimeErrorException;
 
 public class CT_HoaDon {
@@ -8,6 +10,7 @@ public class CT_HoaDon {
     // Khóa chính kép và liên kết
     private HoaDon hoaDon; 
     private MonAn monAn;   
+   
 
     // Constructor chỉ chứa khóa chính kép
     public CT_HoaDon(HoaDon hoaDon, MonAn monAn) {

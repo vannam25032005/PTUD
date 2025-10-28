@@ -567,55 +567,60 @@ public class BanDat_GUI extends JPanel {
      * Chuyển sang giao diện gọi món
      * Bạn cần implement class GoiMon_GUI
      */
+ // Trong BanDat_GUI.java
+
+    /**
+     * Chuyển sang giao diện gọi món
+     * @param maBan Mã bàn được chọn để gọi món.
+     */
     private void chuyenSangGoiMon(String maBan) {
-    	
-        // 1. Lấy cửa sổ chính (JFrame) đang chứa JPanel này
+//        System.out.println(">>> [BanDat_GUI] Đang mở Gọi Món cho bàn: " + maBan); // Debug: Kiểm tra mã bàn
+    	Ban ban = new Ban(maBan);
+        // 1. Lấy cửa sổ cha (JFrame chứa BanDat_GUI)
         JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-        
         if (parentFrame == null) {
             JOptionPane.showMessageDialog(this, "Không tìm thấy cửa sổ cha.", "Lỗi hệ thống", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // 2. ẨN CỬA SỔ CHỌN BÀN (parentFrame)
+        // 2. Ẩn cửa sổ hiện tại (BanDat_GUI)
         parentFrame.setVisible(false);
 
-        // 3. TẠO VÀ CẤU HÌNH CỬA SỔ GỌI MÓN
-        JFrame goiMonFrame = new JFrame("Gọi Món cho Bàn: " + maBan);
-        goiMonFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
-        goiMonFrame.setSize(1200, 800); // Kích thước lớn hơn cho giao diện gọi món
-        goiMonFrame.setLocationRelativeTo(null);
-        
-        // Tham chiếu đến GUI hiện tại để sử dụng sau khi đóng
-        // BanDat_GUI currentGui = this; // Giữ nguyên tham chiếu nếu cần làm mới BanDat_GUI
+        // 3. Tạo cửa sổ mới cho việc Gọi Món
+        JFrame goiMonFrame = new JFrame("Gọi Món cho Bàn: " + maBan); // Đặt tiêu đề cửa sổ
+        goiMonFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Chỉ đóng cửa sổ này khi bấm X
+        goiMonFrame.setSize(1200, 800); // Kích thước cửa sổ Gọi món
+        goiMonFrame.setLocationRelativeTo(parentFrame); // Hiển thị gần cửa sổ cha
 
-        // 4. ĐÍNH KÈM WindowListener ĐỂ HIỆN LẠI CỬA SỔ CHỌN BÀN
+        // 4. Thêm WindowListener để xử lý khi cửa sổ Gọi Món đóng
         goiMonFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent windowEvent) {
-                // HIỆN LẠI CỬA SỔ CHỌN BÀN khi cửa sổ Gọi Món đóng
+                // Hiện lại cửa sổ BanDat_GUI
                 parentFrame.setVisible(true);
-                parentFrame.toFront();
-                
-                // TODO: Nếu BanDat_GUI cần cập nhật trạng thái bàn,
-                // bạn có thể gọi một phương thức làm mới ở đây:
-                // currentGui.lamMoiTrangThaiBan(maBan); 
+                parentFrame.toFront(); // Đưa lên trên nếu có cửa sổ khác che
+
+                // ✅ SỬA ĐỔI: Tải lại danh sách bàn để cập nhật trạng thái
+                // (Ví dụ: bàn từ "Trống"/"Đã đặt" sang "Đang sử dụng" sau khi gọi món)
+                loadBanToTable(banDAO.getAllBan());
+//                System.out.println(">>> [BanDat_GUI] Cửa sổ Gọi Món đóng, đã tải lại bảng Bàn."); // Debug
             }
         });
 
         try {
-            // 5. KHỞI TẠO VÀ THÊM PANEL GỌI MÓN VÀO FRAME MỚI
-            // Giả sử GoiMon_GUI có constructor không tham số ném ra SQLException
-            GoiMon_GUI goiMonPanel = new GoiMon_GUI(/* TODO: Thêm tham số nếu cần */); 
-            
+            // 5. Khởi tạo Panel Gọi Món và TRUYỀN MÃ BÀN VÀO
+            // SỬA: Đảm bảo bạn đang gọi đúng tên lớp GoiMon_GUI
+            GoiMon_GUI goiMonPanel = new GoiMon_GUI(ban); // Gọi constructor với mã bàn 
+
+            // 6. Đặt Panel vào Frame và hiển thị
             goiMonFrame.setContentPane(goiMonPanel);
             goiMonFrame.setVisible(true);
 
         } catch (SQLException e) {
-            // Xử lý lỗi CSDL nếu không khởi tạo được GoiMon_GUI
+            // Xử lý lỗi nếu không thể khởi tạo GoiMon_GUI (thường do lỗi CSDL)
             JOptionPane.showMessageDialog(parentFrame, "Lỗi khi khởi tạo giao diện Gọi Món (CSDL): " + e.getMessage(), "Lỗi Hệ thống", JOptionPane.ERROR_MESSAGE);
             parentFrame.setVisible(true); // Hiện lại cửa sổ cha ngay lập tức
-            goiMonFrame.dispose(); // Đóng frame rỗng
+            goiMonFrame.dispose(); // Đóng frame rỗng nếu có lỗi
             e.printStackTrace();
         }
     }

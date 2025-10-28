@@ -162,13 +162,19 @@ public class Ban_DAO {
     public ArrayList<Ban> getFilteredBan(String filterType, String filterValue) {
         ArrayList<Ban> dsBan = new ArrayList<>();
         Connection con = ConnectDB.getConnection();
+        if (!filterType.equals("trangThai") && !filterType.equals("loaiBan")) {
+            System.err.println("Lọc sai tham số cột!");
+            return dsBan;
+        }
+
         String sql = "SELECT maBan, loaiBan, soGhe, khuVuc, trangThai FROM BAN WHERE " + filterType + " = ?";
         
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            
-            while (rs.next()) {
-                dsBan.add(createBanFromResultSet(rs));
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, filterValue); // ✅ Thiếu dòng này gây lỗi
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    dsBan.add(createBanFromResultSet(rs));
+                }
             }
         } catch (SQLException e) {
             System.err.println("Lỗi khi lọc bàn: " + e.getMessage());

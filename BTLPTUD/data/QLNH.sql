@@ -23,179 +23,187 @@ GO
 -- 1. QUANLY
 ------------------------------------
 CREATE TABLE QUANLY (
-    maQL NVARCHAR(10) PRIMARY KEY,
-    hoTen NVARCHAR(50) NOT NULL,
-    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
-    email NVARCHAR(50),
-    ngaySinh DATE,
-    CCCD NVARCHAR(20) UNIQUE,
-    gioiTinh BIT NOT NULL, -- 0: Nam, 1: Nữ
-    trangThai NVARCHAR(20) NOT NULL 
+    maQL NVARCHAR(10) PRIMARY KEY,
+    hoTen NVARCHAR(50) NOT NULL,
+    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
+    email NVARCHAR(50),
+    ngaySinh DATE,
+    CCCD NVARCHAR(20) UNIQUE,
+    gioiTinh BIT NOT NULL, -- 0: Nam, 1: Nữ
+    trangThai NVARCHAR(20) NOT NULL 
 );
 
 ------------------------------------
 -- 2. NHANVIEN (ĐÃ BỎ CỘT chucVu)
 ------------------------------------
 CREATE TABLE NHANVIEN (
-    maNV NVARCHAR(10) PRIMARY KEY,
-    hoTen NVARCHAR(50) NOT NULL,
-    CCCD NVARCHAR(20) UNIQUE,
-    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
-    email NVARCHAR(50),
-    ngaySinh DATE,
-    gioiTinh BIT NOT NULL, -- 0: Nam, 1: Nữ
-    trangThai NVARCHAR(20) NOT NULL,
-    
-    maQL NVARCHAR(10), -- Quản lý phụ trách trực tiếp
-    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL) 
+    maNV NVARCHAR(10) PRIMARY KEY,
+    hoTen NVARCHAR(50) NOT NULL,
+    CCCD NVARCHAR(20) UNIQUE,
+    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
+    email NVARCHAR(50),
+    ngaySinh DATE,
+    gioiTinh BIT NOT NULL, -- 0: Nam, 1: Nữ
+    trangThai NVARCHAR(20) NOT NULL,
+    
+    maQL NVARCHAR(10), -- Quản lý phụ trách trực tiếp
+    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL) 
 );
 
 ------------------------------------
 -- 3. TAIKHOAN
 ------------------------------------
 CREATE TABLE TAIKHOAN (
-    tenDangNhap NVARCHAR(50) PRIMARY KEY,
-    matKhau NVARCHAR(50) NOT NULL,
-    vaiTro NVARCHAR(20) NOT NULL, 
-    trangThai NVARCHAR(20) NOT NULL,
-    
-    maNV NVARCHAR(10) UNIQUE, 
-    maQL NVARCHAR(10) UNIQUE, 
-    
-    FOREIGN KEY (maNV) REFERENCES NHANVIEN(maNV),
-    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL)
+    tenDangNhap NVARCHAR(50) PRIMARY KEY,
+    matKhau NVARCHAR(50) NOT NULL,
+    vaiTro NVARCHAR(20) NOT NULL, 
+    trangThai NVARCHAR(20) NOT NULL,
+    
+    maNV NVARCHAR(10) UNIQUE, 
+    maQL NVARCHAR(10) UNIQUE, 
+    
+    FOREIGN KEY (maNV) REFERENCES NHANVIEN(maNV),
+    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL)
 );
 
 ------------------------------------
 -- 4. KHACHHANG
 ------------------------------------
 CREATE TABLE KHACHHANG (
-    maKH NVARCHAR(10) PRIMARY KEY,
-    hoTenKH NVARCHAR(50) NOT NULL,
-    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
-    email NVARCHAR(50), 
-    gioiTinh BIT NOT NULL -- 0: Nam, 1: Nữ
+    maKH NVARCHAR(10) PRIMARY KEY,
+    hoTenKH NVARCHAR(50) NOT NULL,
+    soDienThoai NVARCHAR(15) UNIQUE NOT NULL,
+    email NVARCHAR(50), 
+    gioiTinh BIT NOT NULL -- 0: Nam, 1: Nữ
 );
 
 ------------------------------------
 -- 5. THETHANHVIEN
 ------------------------------------
 CREATE TABLE THETHANHVIEN (
-    maThe NVARCHAR(10) PRIMARY KEY,
-    maKH NVARCHAR(10) UNIQUE NOT NULL,
-    diemTichLuy INT NOT NULL CHECK (diemTichLuy >= 0),
-    loaiHang NVARCHAR(50) NOT NULL DEFAULT N'Bạc', -- Giữ lại cột này
-    FOREIGN KEY (maKH) REFERENCES KHACHHANG(maKH)
+    maThe NVARCHAR(10) PRIMARY KEY,
+    maKH NVARCHAR(10) UNIQUE NOT NULL,
+    diemTichLuy INT NOT NULL CHECK (diemTichLuy >= 0),
+    loaiHang NVARCHAR(50) NOT NULL DEFAULT N'Bạc', -- Giữ lại cột này
+    FOREIGN KEY (maKH) REFERENCES KHACHHANG(maKH)
 );
 
 ------------------------------------
 -- 6. BAN
 ------------------------------------
 CREATE TABLE BAN (
-    maBan NVARCHAR(10) PRIMARY KEY,
-    loaiBan NVARCHAR(50) NOT NULL,    
-    soGhe INT NOT NULL CHECK (soGhe > 0), 
-    khuVuc NVARCHAR(50) NOT NULL,     
-    trangThai NVARCHAR(20) NOT NULL   
+    maBan NVARCHAR(10) PRIMARY KEY,
+    loaiBan NVARCHAR(50) NOT NULL,    
+    soGhe INT NOT NULL CHECK (soGhe > 0), 
+    khuVuc NVARCHAR(50) NOT NULL,     
+    trangThai NVARCHAR(20) NOT NULL   
 );
 
 ------------------------------------
 -- 7. BANDAT
 ------------------------------------
 CREATE TABLE BANDAT (
-    maDatBan NVARCHAR(10) PRIMARY KEY,
-    maKH NVARCHAR(10) NOT NULL,
-    maBan NVARCHAR(10) NOT NULL,
-    
-    ngayDat DATE NOT NULL,
-    gioDat TIME NOT NULL, 
-    ghiChu NVARCHAR(255),
-    
-    soLuongKhach INT NOT NULL CHECK (soLuongKhach > 0),
-    tienCoc FLOAT NOT NULL CHECK (tienCoc >= 0),
-    trangThai NVARCHAR(20) NOT NULL, 
-    
-    FOREIGN KEY (maKH) REFERENCES KHACHHANG(maKH),
-    FOREIGN KEY (maBan) REFERENCES BAN(maBan)
+    maDatBan NVARCHAR(10) PRIMARY KEY,
+    maKH NVARCHAR(10) NOT NULL,
+    maBan NVARCHAR(10) NOT NULL,
+    
+    ngayDat DATE NOT NULL,
+    gioDat TIME NOT NULL, 
+    ghiChu NVARCHAR(255),
+    
+    soLuongKhach INT NOT NULL CHECK (soLuongKhach > 0),
+    tienCoc FLOAT NOT NULL CHECK (tienCoc >= 0),
+    trangThai NVARCHAR(20) NOT NULL, 
+    
+    FOREIGN KEY (maKH) REFERENCES KHACHHANG(maKH),
+    FOREIGN KEY (maBan) REFERENCES BAN(maBan)
 );
 
 ------------------------------------
 -- 8. KHUYENMAI
 ------------------------------------
 CREATE TABLE KHUYENMAI (
-    maKM NVARCHAR(10) PRIMARY KEY,
-    tenKM NVARCHAR(50) NOT NULL,
-    moTa NVARCHAR(100),
-    phanTramGiam FLOAT NOT NULL CHECK (phanTramGiam >= 0 AND phanTramGiam <= 1),
-    ngayBatDau DATE NOT NULL,
-    ngayKetThuc DATE NOT NULL,
-    
-    maQL NVARCHAR(10) NOT NULL, 
-    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL),
-    CHECK (ngayKetThuc >= ngayBatDau)
+    maKM NVARCHAR(10) PRIMARY KEY,
+    tenKM NVARCHAR(50) NOT NULL,
+    moTa NVARCHAR(100),
+    phanTramGiam FLOAT NOT NULL CHECK (phanTramGiam >= 0 AND phanTramGiam <= 1),
+    ngayBatDau DATE NOT NULL,
+    ngayKetThuc DATE NOT NULL,
+    
+    maQL NVARCHAR(10) NOT NULL, 
+    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL),
+    CHECK (ngayKetThuc >= ngayBatDau)
 );
 
 ------------------------------------
 -- 9. MONAN
 ------------------------------------
 CREATE TABLE MONAN (
-    maMon NVARCHAR(10) PRIMARY KEY,
-    tenMon NVARCHAR(50) NOT NULL,
-    loaiMon NVARCHAR(50) NOT NULL,
-    giaMon FLOAT NOT NULL CHECK (giaMon > 0),
-    hinhAnh NVARCHAR(255),
-    
-    maQL NVARCHAR(10) NOT NULL, 
-    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL) 
+    maMon NVARCHAR(10) PRIMARY KEY,
+    tenMon NVARCHAR(50) NOT NULL,
+    loaiMon NVARCHAR(50) NOT NULL,
+    giaMon FLOAT NOT NULL CHECK (giaMon > 0),
+    hinhAnh NVARCHAR(255),
+    
+    maQL NVARCHAR(10) NOT NULL, 
+    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL) 
 );
-
+CREATE TABLE CT_BANDAT (
+    maBan NVARCHAR(10) NOT NULL,
+    maMon NVARCHAR(10) NOT NULL,
+    soLuong INT NOT NULL CHECK (soLuong > 0),
+    PRIMARY KEY (maBan, maMon),
+    FOREIGN KEY (maBan) REFERENCES BAN(maBan),
+    FOREIGN KEY (maMon) REFERENCES MONAN(maMon)
+);
+GO
 ------------------------------------
 -- 10. HOADON
 ------------------------------------
 CREATE TABLE HOADON (
-    maHD NVARCHAR(10) PRIMARY KEY,
-    maThe NVARCHAR(10),	
-    maNV NVARCHAR(10) NOT NULL, 
-    maBan NVARCHAR(10) NOT NULL,
-    maDatBan NVARCHAR(10) UNIQUE, 
-    maKM NVARCHAR(10),
-    ngayLap DATETIME NOT NULL,
-    tongTien FLOAT NOT NULL CHECK (tongTien >= 0),
-    trangThaiThanhToan NVARCHAR(20) NOT NULL, 
-    
-    FOREIGN KEY (maThe) REFERENCES THETHANHVIEN(maThe),
-    FOREIGN KEY (maNV) REFERENCES NHANVIEN(maNV),
-    FOREIGN KEY (maBan) REFERENCES BAN(maBan),
-    FOREIGN KEY (maDatBan) REFERENCES BANDAT(maDatBan),
-    FOREIGN KEY (maKM) REFERENCES KHUYENMAI(maKM)
+    maHD NVARCHAR(10) PRIMARY KEY,
+    maThe NVARCHAR(10),	
+    maNV NVARCHAR(10) NOT NULL, 
+    maBan NVARCHAR(10) NOT NULL,
+    maDatBan NVARCHAR(10) UNIQUE, 
+    maKM NVARCHAR(10),
+    ngayLap DATETIME NOT NULL,
+    tongTien FLOAT NOT NULL CHECK (tongTien >= 0),
+    trangThaiThanhToan NVARCHAR(20) NOT NULL, 
+    
+    FOREIGN KEY (maThe) REFERENCES THETHANHVIEN(maThe),
+    FOREIGN KEY (maNV) REFERENCES NHANVIEN(maNV),
+    FOREIGN KEY (maBan) REFERENCES BAN(maBan),
+    FOREIGN KEY (maDatBan) REFERENCES BANDAT(maDatBan),
+    FOREIGN KEY (maKM) REFERENCES KHUYENMAI(maKM)
 );
 
 ------------------------------------
 -- 11. CT_HOADON
 ------------------------------------
 CREATE TABLE CT_HOADON (
-    maHD NVARCHAR(10),
-    maMon NVARCHAR(10),
-    soLuong INT NOT NULL CHECK (soLuong > 0),
-    thanhTien FLOAT NOT NULL CHECK (thanhTien >= 0),
-    
-    PRIMARY KEY (maHD, maMon),
-    FOREIGN KEY (maHD) REFERENCES HOADON(maHD),
-    FOREIGN KEY (maMon) REFERENCES MONAN(maMon)
+    maHD NVARCHAR(10),
+    maMon NVARCHAR(10),
+    soLuong INT NOT NULL CHECK (soLuong > 0),
+    thanhTien FLOAT NOT NULL CHECK (thanhTien >= 0),
+    
+    PRIMARY KEY (maHD, maMon),
+    FOREIGN KEY (maHD) REFERENCES HOADON(maHD),
+    FOREIGN KEY (maMon) REFERENCES MONAN(maMon)
 );
 
 ------------------------------------
 -- 12. BAOCAO
 ------------------------------------
 CREATE TABLE BAOCAO (
-    maBC NVARCHAR(10) PRIMARY KEY,
-    ngayLap DATE NOT NULL,
-    thoiGianTu DATE NOT NULL,
-    thoiGianDen DATE NOT NULL,
-    doanhThu FLOAT NOT NULL,
-    
-    maQL NVARCHAR(10) NOT NULL, 
-    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL)
+    maBC NVARCHAR(10) PRIMARY KEY,
+    ngayLap DATE NOT NULL,
+    thoiGianTu DATE NOT NULL,
+    thoiGianDen DATE NOT NULL,
+    doanhThu FLOAT NOT NULL,
+    
+    maQL NVARCHAR(10) NOT NULL, 
+    FOREIGN KEY (maQL) REFERENCES QUANLY(maQL)
 );
 GO
 
@@ -252,12 +260,12 @@ INSERT INTO HOADON (maHD, maThe, maNV, maBan, maDatBan, maKM, ngayLap, tongTien,
 
 -- 11. CT_HOADON
 INSERT INTO CT_HOADON (maHD, maMon, soLuong, thanhTien) VALUES
-('HD001', 'MA001', 1, 299000), 
-('HD001', 'MA003', 1, 40000); 
+('HD001', 'MA001', 1, 299000), 
+('HD001', 'MA003', 1, 40000); 
 
 -- 12. BAOCAO
 INSERT INTO BAOCAO (maBC, ngayLap, thoiGianTu, thoiGianDen, doanhThu, maQL) VALUES 
-('BC001', GETDATE(), '2025-10-01', '2025-10-31', 288150, 'QL001'); 
+('BC001', GETDATE(), '2025-10-01', '2025-10-31', 288150, 'QL001'); 
 GO
 -- Bắt đầu chèn dữ liệu
 INSERT INTO dbo.BAN (maBan, loaiBan, soGhe, khuVuc, trangThai) VALUES
@@ -288,4 +296,3 @@ INSERT INTO dbo.BAN (maBan, loaiBan, soGhe, khuVuc, trangThai) VALUES
 -- 2 Phòng VIP (12-15 chỗ)
 ('VIP2', N'Phòng VIP', 15, N'Tầng 3', N'Trống'),
 ('VIP3', N'Phòng VIP', 15, N'Tầng 3', N'Trống');
-

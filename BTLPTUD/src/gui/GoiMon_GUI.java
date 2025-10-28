@@ -10,18 +10,23 @@ import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 // Import các lớp cần thiết để làm việc với CSDL
 import connectDB.ConnectDB; 
 import dao.MonAn_DAO;
+import dao.Ban_DAO;
+import dao.CT_BanDat_DAO; 
 import entity.MonAn;
-
-// LƯU Ý: Phải đảm bảo lớp ThanhToan_Gui (với constructor Map, Map, double) tồn tại 
-// trong package gui hoặc import nó.
+import gui.GoiMon_GUI.NutEditor;
+import gui.GoiMon_GUI.NutRenderer;
+import entity.CTBanDat;
+import entity.Ban;
+import entity.BanDat; // Cần cho CTBanDat
 
 public class GoiMon_GUI extends JPanel {
     private NumberFormat dinhDangTien;
-
+    
     private JComboBox<String> cboLoaiMon;
     private JPanel pnlDanhSachMon;
     private JTextField txtTimKiem;
@@ -29,13 +34,13 @@ public class GoiMon_GUI extends JPanel {
     // --- Biến cho Món đang gọi ---
     private JTable tblMonDangGoi;
     private DefaultTableModel modelMonDangGoi;
-    private JLabel lblTongTienDangGoi; 
-    private Map<String, Integer> gioHang;   
-    private Map<String, Integer> bangGia; // Tên món -> Giá (int)
+    private JLabel lblTongTienDangGoi;
+    private Map<String, Integer> gioHang; 
+    private Map<String, Integer> bangGia; 
     private double tongTien = 0;              
 
     // --- Biến cho Tổng tiền Hóa đơn và Món đã gọi ---
-    private JLabel lblTongTien;             
+    private JLabel lblTongTien;
     private JTable tblMonDaGoi;
     private DefaultTableModel modelMonDaGoi;
     private Map<String, Integer> gioHangXacNhan; 
@@ -45,26 +50,56 @@ public class GoiMon_GUI extends JPanel {
     private JLabel lblTieuDeDangGoi;
     private JLabel lblTieuDeDaGoi;
 
-    // --- BIẾN MỚI TỪ CSDL ---
+    // --- BIẾN CSDL ---
     private MonAn_DAO monAn_DAO;
-    private List<MonAn> danhSachMonAn; // Danh sách món ăn gốc từ CSDL
-    private List<MonAn> danhSachMonAnHienThi; // Danh sách hiển thị sau khi lọc/tìm kiếm
+    private CT_BanDat_DAO ctBanDat_DAO; 
+    private List<MonAn> danhSachMonAn; 
+    private List<MonAn> danhSachMonAnHienThi;
+    
+    // ✅ THAY ĐỔI: Mã bàn không còn final, có thể thay đổi
+    private String maBanHienTai;
+    private Ban ban;
+    
+    // Khai báo cột
+    private static final String[] COT_DANG_GOI = {"STT", "Tên món", "SL", "Giá", "Thao tác"};
+    private static final String[] COT_DA_GOI = {"STT", "Tên món", "SL", "Giá"};
 
-    public GoiMon_GUI() throws SQLException {
+
+    // ✅ THAY ĐỔI: Constructor nhận mã bàn
+    public GoiMon_GUI(Ban ban) throws SQLException {
+        this.ban = ban; // Gán mã bàn từ tham số
+        maBanHienTai = ban.getMaBan();
         dinhDangTien = NumberFormat.getInstance(new Locale("vi", "VN"));
 
         gioHang = new LinkedHashMap<>();
         bangGia = new HashMap<>();
         gioHangXacNhan = new LinkedHashMap<>();
 
-        // 1. KHỞI TẠO DAO VÀ KẾT NỐI
-        monAn_DAO = new MonAn_DAO();
-        ConnectDB.getConnection(); // Mở kết nối
+        // 💡 1. KHỞI TẠO MODEL VÀ LABEL (Sửa lỗi NullPointer)
+        modelMonDangGoi = new DefaultTableModel(COT_DANG_GOI, 0) {
+            public boolean isCellEditable(int r, int c) { return c == 4; }
+        };
+        modelMonDaGoi = new DefaultTableModel(COT_DA_GOI, 0) {
+            public boolean isCellEditable(int r, int c) { return false; } 
+        };
         
-        // 2. TẢI DỮ LIỆU
-        taiDuLieuMonAn();
-        khoiTaoGia(); // Đổ dữ liệu giá vào Map
+        lblTongTienDangGoi = new JLabel(dinhDangTien.format(0) + " VND");
+        lblTieuDeDangGoi = new JLabel("Món đang gọi (0)");
+        lblTongTien = new JLabel(dinhDangTien.format(0) + " VND");
+        lblTieuDeDaGoi = new JLabel("Món đã gọi (0)"); 
 
+
+        // 2. KHỞI TẠO DAO VÀ KẾT NỐI
+        monAn_DAO = new MonAn_DAO();
+        ctBanDat_DAO = new CT_BanDat_DAO(); 
+        ConnectDB.getConnection(); 
+        
+        // 3. TẢI DỮ LIỆU
+        taiDuLieuMonAn();
+        khoiTaoGia(); 
+        taiDuLieuDaGoi(); // Gọi hàm tải dữ liệu sau khi các model/label đã được khởi tạo
+
+        // 4. THIẾT LẬP GUI
         setLayout(new BorderLayout());
         setBackground(new Color(255, 235, 205));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -78,17 +113,16 @@ public class GoiMon_GUI extends JPanel {
         lblBack.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Đóng kết nối và đóng cửa sổ
                 JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(GoiMon_GUI.this);
                 if (parent != null) {
-                    ConnectDB.disconnect(); // ⚠️ Đóng kết nối
+                    ConnectDB.disconnect(); 
                     parent.dispose();
                 }
             }
         });
         
         tieuDe.add(lblBack, BorderLayout.WEST);
-        JLabel lblTitle = new JLabel("Gọi món", SwingConstants.CENTER);
+        JLabel lblTitle = new JLabel("Gọi món - Bàn: " + maBanHienTai, SwingConstants.CENTER);
         lblTitle.setFont(new Font("Arial", Font.BOLD, 22));
         tieuDe.add(lblTitle, BorderLayout.CENTER);
         add(tieuDe, BorderLayout.NORTH);
@@ -106,29 +140,341 @@ public class GoiMon_GUI extends JPanel {
         add(pnlChinh, BorderLayout.CENTER);
     }
 
-    // --- PHƯƠNG THỨC MỚI: Tải và Khởi tạo dữ liệu ---
+// -------------------------------------------------------------------------
+// --- PHƯƠNG THỨC MỚI: CẬP NHẬT MÃ BÀN ------------------------------------
+// -------------------------------------------------------------------------
+
+    /**
+     * ✅ THÊM MỚI: Cập nhật mã bàn hiện tại và tải lại dữ liệu món đã gọi
+     */
+    public void setMaBanHienTai(String maBan) {
+        this.maBanHienTai = maBan;
+        
+        // Xóa dữ liệu cũ
+        gioHangXacNhan.clear();
+        gioHang.clear();
+        
+        // Tải lại dữ liệu món đã gọi cho bàn mới
+        taiDuLieuDaGoi();
+        
+        // Cập nhật giao diện
+        capNhatBangGio();
+        txtGhiChu.setText("");
+        
+        // Cập nhật tiêu đề
+        Component[] components = getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                JPanel panel = (JPanel) comp;
+                Component[] subComps = panel.getComponents();
+                for (Component subComp : subComps) {
+                    if (subComp instanceof JLabel) {
+                        JLabel label = (JLabel) subComp;
+                        if (label.getText().startsWith("Gọi món - Bàn:")) {
+                            label.setText("Gọi món - Bàn: " + maBanHienTai);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * ✅ THÊM MỚI: Lấy mã bàn hiện tại
+     */
+    public String getMaBanHienTai() {
+        return maBanHienTai;
+    }
+
+// -------------------------------------------------------------------------
+// --- LOGIC TẢI DỮ LIỆU CSDL VÀ HIỂN THỊ ----------------------------------
+// -------------------------------------------------------------------------
+
     private void taiDuLieuMonAn() {
         try {
             danhSachMonAn = monAn_DAO.layTatCaMonAn();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Lỗi khi tải danh sách món ăn từ CSDL: " + e.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
-            danhSachMonAn = new ArrayList<>(); // Tạo danh sách rỗng nếu lỗi
+            danhSachMonAn = new ArrayList<>(); 
         }
-        danhSachMonAnHienThi = new ArrayList<>(danhSachMonAn); 
+        danhSachMonAnHienThi = new ArrayList<>(danhSachMonAn);
     }
 
     private void khoiTaoGia() {
-        bangGia.clear(); 
+        bangGia.clear();
         if (danhSachMonAn != null) {
             for (MonAn mon : danhSachMonAn) {
-                // Đổ tên món và giá vào Map bangGia (ép kiểu double -> int)
-                bangGia.put(mon.getTenMonAn(), (int)mon.getGiaMonAn()); 
+                bangGia.put(mon.getTenMonAn(), (int)mon.getGiaMonAn());
             }
         }
     }
-    // ----------------------------------------------------
+    
+    /**
+     * TẢI MÓN ĐÃ GỌI TỪ CSDL VÀ CẬP NHẬT BẢNG ĐÃ GỌI
+     * ✅ SỬ DỤNG: maBanHienTai thay vì MA_DAT_BAN_HIEN_TAI
+     */
+    private void taiDuLieuDaGoi() {
+        // Lấy Map<Tên món, Số lượng> từ CSDL
+        Map<String, Integer> data = ctBanDat_DAO.layCTBan(maBanHienTai);
+        
+        gioHangXacNhan.clear();
+        if (data != null) {
+            gioHangXacNhan.putAll(data);
+        }
+        
+        // Cập nhật bảng Món đã gọi
+        capNhatBangDaGoi();
+    }
 
+// -------------------------------------------------------------------------
+// --- LOGIC LỌC VÀ TÌM KIẾM ----------------------------------------------
+// -------------------------------------------------------------------------
 
+    private void locMon() {
+        String loaiChon = (String) cboLoaiMon.getSelectedItem();
+        danhSachMonAnHienThi.clear();
+        String tuKhoa = txtTimKiem.getText().trim().toLowerCase();
+        
+        for (MonAn mon : danhSachMonAn) {
+            boolean thoaManLoai = "Tất cả".equals(loaiChon) || mon.getLoaiMonAn().equals(loaiChon);
+            boolean thoaManTimKiem = mon.getTenMonAn().toLowerCase().contains(tuKhoa);
+            
+            if (thoaManLoai && thoaManTimKiem) {
+                danhSachMonAnHienThi.add(mon);
+            }
+        }
+        hienThiMonAn(danhSachMonAnHienThi);
+    }
+
+    private void timMon() {
+        locMon();
+    }
+
+// -------------------------------------------------------------------------
+// --- LOGIC GIỎ HÀNG (TRONG BỘ NHỚ) ---------------------------------------
+// -------------------------------------------------------------------------
+
+    private void themVaoGio(String ten, int gia, int sl) {
+        if (gioHang.containsKey(ten))
+            gioHang.put(ten, gioHang.get(ten) + sl);
+        else
+            gioHang.put(ten, sl);
+        capNhatBangGio();
+        JOptionPane.showMessageDialog(this, "Đã thêm " + sl + " " + ten + " vào giỏ hàng");
+    }
+
+    private void capNhatBangGio() {
+        modelMonDangGoi.setRowCount(0);
+        int stt = 1;
+        tongTien = 0;
+        for (Map.Entry<String, Integer> e : gioHang.entrySet()) {
+            String ten = e.getKey();
+            int sl = e.getValue();
+            // Lấy giá từ Map bangGia đã được load từ CSDL
+            int gia = bangGia.getOrDefault(ten, 0);
+            modelMonDangGoi.addRow(new Object[]{stt++, ten, sl, dinhDangTien.format((long)gia * sl) + " VND", "Xóa"});
+            tongTien += (long)gia * sl;
+        }
+        
+        lblTongTienDangGoi.setText(dinhDangTien.format(tongTien) + " VND");
+        
+        lblTieuDeDangGoi.setText("Món đang gọi (" + gioHang.size() + ")");
+    }
+
+    private void xoaKhoiGio(String ten) {
+        gioHang.remove(ten);
+        capNhatBangGio();
+    }
+    
+    private void huyDon() {
+        if (gioHang.isEmpty()) {
+             JOptionPane.showMessageDialog(this, "Giỏ hàng rỗng, không có gì để hủy.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+             return;
+        }
+
+        if (JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn hủy đơn đang gọi?", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+            gioHang.clear();
+            capNhatBangGio();
+            JOptionPane.showMessageDialog(this, "Đơn hàng đang gọi đã được hủy.");
+        }
+    }
+
+    /**
+     * LƯU DỮ LIỆU TỪ GIỎ HÀNG VÀO CSDL (CT_BANDAT)
+     * ✅ SỬ DỤNG: maBanHienTai thay vì MA_DAT_BAN_HIEN_TAI
+     */
+    private void xacNhanDon() {
+        if (gioHang.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Giỏ hàng rỗng, không có gì để xác nhận!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // LẤY MAP MÓN ĂN GỐC TỪ CSDL ĐỂ TÌM MÃ MONAN
+            Map<String, MonAn> mapTenToMon = new HashMap<>();
+            for(MonAn mon : danhSachMonAn) {
+                mapTenToMon.put(mon.getTenMonAn(), mon);
+            }
+            
+            // 1. CỘNG DỒN DỮ LIỆU MỚI VÀO gioHangXacNhan TRONG BỘ NHỚ
+            for (Map.Entry<String, Integer> entry : gioHang.entrySet()) {
+                gioHangXacNhan.merge(entry.getKey(), entry.getValue(), Integer::sum);
+            }
+
+            // 2. LƯU TOÀN BỘ gioHangXacNhan VÀO CSDL (Xóa cũ, chèn mới)
+            ctBanDat_DAO.xoaTatCaCTBan(maBanHienTai); // ✅ Sử dụng maBanHienTai
+            
+            // Lấy thực thể BanDat (chỉ cần mã)
+            Ban banDatGoc = new Ban(maBanHienTai); // ✅ Sử dụng maBanHienTai
+            
+            for (Map.Entry<String, Integer> entry : gioHangXacNhan.entrySet()) {
+                MonAn mon = mapTenToMon.get(entry.getKey());
+                if (mon != null) {
+                    // Tạo CTBanDat với các Entity đầy đủ
+                    CTBanDat ct = new CTBanDat(banDatGoc, mon, entry.getValue());
+                    ctBanDat_DAO.themCTBan(ct);
+                }
+            }
+            
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi lưu chi tiết đơn hàng vào CSDL: " + e.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
+            return; 
+        }
+
+        // 3. LÀM SẠCH VÀ CẬP NHẬT GUI
+        gioHang.clear();
+        capNhatBangGio(); // Cập nhật giỏ hàng đang gọi (rỗng)
+        
+        capNhatBangDaGoi(); // Cập nhật bảng món đã gọi (dùng gioHangXacNhan)
+        txtGhiChu.setText("");
+
+        JOptionPane.showMessageDialog(this, "Đã xác nhận đơn hàng! Các món đã được lưu vào CSDL.");
+    }
+    
+// -------------------------------------------------------------------------
+// --- PHƯƠNG THỨC XỬ LÝ SAU THANH TOÁN ------------------------------------
+// -------------------------------------------------------------------------
+
+    /**
+     * Làm mới trạng thái GUI sau khi hóa đơn đã được thanh toán xong (bao gồm xóa CSDL)
+     * ✅ SỬ DỤNG: maBanHienTai thay vì MA_DAT_BAN_HIEN_TAI
+     */
+ // Trong GoiMontest_GUI.java
+
+    public void lamMoiSauThanhToan() {
+        try {
+            // 1. XÓA DỮ LIỆU GỌI MÓN (CT_BanDat) CỦA BÀN NÀY KHỎI CSDL
+            ctBanDat_DAO.xoaTatCaCTBan(maBanHienTai); // Sử dụng mã bàn hiện tại
+
+            // 2. CẬP NHẬT TRẠNG THÁI BÀN THÀNH "Trống" TRONG CSDL
+            Ban_DAO banDAO_temp = new Ban_DAO(); // Khởi tạo DAO Bàn (hoặc inject nếu có)
+            if (banDAO_temp.updateTrangThaiBan(maBanHienTai, "Trống")) {
+//                System.out.println(">>> [GoiMon_GUI] Đã cập nhật bàn '" + maBanHienTai + "' thành Trống sau thanh toán.");
+            } else {
+//                System.err.println(">>> [GoiMon_GUI] Lỗi: Không cập nhật được trạng thái bàn '" + maBanHienTai + "' thành Trống.");
+                // Cân nhắc hiển thị lỗi cho người dùng nếu cần thiết
+                 JOptionPane.showMessageDialog(this, "Lỗi cập nhật trạng thái bàn về Trống.", "Lỗi CSDL", JOptionPane.WARNING_MESSAGE);
+            }
+
+        } catch (SQLException e) {
+            // Bắt lỗi chung cho cả xóa CT_BanDat và cập nhật BAN
+            JOptionPane.showMessageDialog(this, "Lỗi CSDL khi làm mới sau thanh toán: " + e.getMessage(), "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace(); // In lỗi ra console để debug
+            // Dù lỗi CSDL, vẫn tiếp tục làm mới GUI
+        }
+
+        // 3. LÀM MỚI CÁC THÀNH PHẦN GUI
+        gioHangXacNhan.clear(); // Xóa danh sách món đã xác nhận trong bộ nhớ
+        tongTienHoaDon = 0;
+        modelMonDaGoi.setRowCount(0); // Xóa bảng món đã gọi trên GUI
+        lblTongTien.setText(dinhDangTien.format(tongTienHoaDon) + " VND"); // Cập nhật tổng tiền hóa đơn
+        lblTieuDeDaGoi.setText("Món đã gọi (0)"); // Cập nhật tiêu đề bảng đã gọi
+
+        gioHang.clear(); // Xóa giỏ hàng tạm thời
+        capNhatBangGio(); // Cập nhật bảng món đang gọi (thành rỗng)
+        txtGhiChu.setText(""); // Xóa ghi chú
+
+        // 4. THÔNG BÁO CHO NGƯỜI DÙNG
+        JOptionPane.showMessageDialog(this, "Hóa đơn đã được thanh toán và bàn [" + maBanHienTai + "] đã được dọn!", "Hoàn tất", JOptionPane.INFORMATION_MESSAGE);
+    }
+    /**
+     * Mở giao diện ThanhToan_Gui và truyền dữ liệu hóa đơn.
+     */
+    private void thanhToan() {
+    	if (gioHangXacNhan.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Chưa có món nào được xác nhận để thanh toán!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        
+        if (parentFrame == null) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy cửa sổ cha để mở màn hình thanh toán.", "Lỗi hệ thống", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        parentFrame.setVisible(false);
+        GoiMon_GUI currentGui = this;
+
+        JFrame thanhToanFrame = new JFrame("Thanh toán");
+        thanhToanFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
+        thanhToanFrame.setSize(1000, 750);
+        thanhToanFrame.setLocationRelativeTo(null);
+        
+        thanhToanFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent windowEvent) {
+                // HIỆN LẠI CỬA SỔ GỌI MÓN KHI CỬA SỔ THANH TOÁN ĐÓNG
+                parentFrame.setVisible(true);
+                parentFrame.toFront();
+                
+                // Xóa dữ liệu cũ sau khi thanh toán thành công
+                currentGui.lamMoiSauThanhToan(); 
+            }
+        });
+
+        try {
+            // Giả định ThanhToan_Gui có constructor này
+            ThanhToan_Gui thanhToanPanel = new ThanhToan_Gui(gioHangXacNhan, bangGia, tongTienHoaDon,ban);
+            thanhToanFrame.setContentPane(thanhToanPanel);
+            
+        } catch (Exception e) {
+             JOptionPane.showMessageDialog(this, "Lỗi khi khởi tạo màn hình Thanh toán: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+             parentFrame.setVisible(true); 
+             return;
+        }
+
+        thanhToanFrame.setVisible(true);
+    }
+    
+// -------------------------------------------------------------------------
+// --- KHU VỰC THIẾT KẾ GUI VÀ HIỂN THỊ ------------------------------------
+// -------------------------------------------------------------------------
+    
+    /**
+     * Cập nhật hiển thị bảng Món đã gọi và Tổng tiền hóa đơn.
+     */
+    private void capNhatBangDaGoi() {
+        modelMonDaGoi.setRowCount(0);
+        int stt = 1;
+        tongTienHoaDon = 0;
+        
+        for (Map.Entry<String, Integer> e : gioHangXacNhan.entrySet()) {
+            String ten = e.getKey();
+            int sl = e.getValue();
+            if (bangGia.containsKey(ten)) {
+                int gia = bangGia.get(ten);
+                long thanhTien = (long)gia * sl;
+                
+                modelMonDaGoi.addRow(new Object[]{stt++, ten, sl, dinhDangTien.format(thanhTien) + " VND"});
+                tongTienHoaDon += thanhTien;
+            }
+        }
+        lblTieuDeDaGoi.setText("Món đã gọi (" + gioHangXacNhan.size() + ")");
+        lblTongTien.setText(dinhDangTien.format(tongTienHoaDon) + " VND");
+    }
+    
     private JPanel taoKhuVucMenu() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
@@ -141,7 +487,6 @@ public class GoiMon_GUI extends JPanel {
         JLabel lblLoai = new JLabel("Loại món");
         lblLoai.setFont(new Font("Arial", Font.BOLD, 13));
         
-        // ⚠️ LẤY DANH SÁCH LOẠI MÓN TỪ DAO
         List<String> loaiMonCSDL = new ArrayList<>();
         try {
             loaiMonCSDL = monAn_DAO.layDanhSachLoaiMon();
@@ -161,7 +506,6 @@ public class GoiMon_GUI extends JPanel {
         pnlLoai.add(lblLoai);
         pnlLoai.add(cboLoaiMon);
         
-        // ... (phần code tạo ô tìm kiếm) ...
         JPanel pnlTim = new JPanel(new BorderLayout(4, 0));
         pnlTim.setBackground(Color.WHITE);
         pnlTim.setBorder(BorderFactory.createLineBorder(new Color(230,230,230)));
@@ -183,7 +527,6 @@ public class GoiMon_GUI extends JPanel {
         pnlDanhSachMon.setBackground(Color.WHITE);
         pnlDanhSachMon.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        // ⚠️ HIỂN THỊ MÓN ĂN THỰC TẾ LẦN ĐẦU
         hienThiMonAn(danhSachMonAnHienThi); 
 
         JScrollPane cuon = new JScrollPane(pnlDanhSachMon);
@@ -199,16 +542,14 @@ public class GoiMon_GUI extends JPanel {
      * Phương thức hiển thị các item món ăn lên pnlDanhSachMon
      */
     private void hienThiMonAn(List<MonAn> ds) {
-        pnlDanhSachMon.removeAll(); // Xóa các thành phần cũ
-        pnlDanhSachMon.setLayout(new GridLayout(0, 3, 10, 12)); // Đảm bảo layout không bị mất
+        pnlDanhSachMon.removeAll(); 
+        pnlDanhSachMon.setLayout(new GridLayout(0, 3, 10, 12)); 
         
         if (ds != null && !ds.isEmpty()) {
             for (MonAn mon : ds) {
-                // Sử dụng thuộc tính của MonAn entity
                 themMon(mon.getTenMonAn(), (int)mon.getGiaMonAn(), mon.getHinhAnh());
             }
         } else {
-            // Thêm thông báo nếu danh sách rỗng
             pnlDanhSachMon.setLayout(new BorderLayout());
             pnlDanhSachMon.add(new JLabel("Không tìm thấy món ăn nào.", SwingConstants.CENTER), BorderLayout.CENTER);
         }
@@ -216,28 +557,6 @@ public class GoiMon_GUI extends JPanel {
         pnlDanhSachMon.repaint();
     }
     
-    // --- LỌC VÀ TÌM KIẾM DỮ LIỆU THỰC TẾ ---
-    private void locMon() {
-        String loaiChon = (String) cboLoaiMon.getSelectedItem();
-        danhSachMonAnHienThi.clear();
-        String tuKhoa = txtTimKiem.getText().trim().toLowerCase();
-        
-        for (MonAn mon : danhSachMonAn) {
-            boolean thoaManLoai = "Tất cả".equals(loaiChon) || mon.getLoaiMonAn().equals(loaiChon);
-            boolean thoaManTimKiem = mon.getTenMonAn().toLowerCase().contains(tuKhoa);
-            
-            if (thoaManLoai && thoaManTimKiem) {
-                danhSachMonAnHienThi.add(mon);
-            }
-        }
-        hienThiMonAn(danhSachMonAnHienThi);
-    }
-
-    private void timMon() {
-        locMon(); 
-    }
-    
-    // ... (Các phương thức khác giữ nguyên) ...
     
     private void themMon(String ten, int gia, String imagePath) { 
         // Code tạo item món ăn
@@ -256,14 +575,9 @@ public class GoiMon_GUI extends JPanel {
         lblAnh.setBackground(new Color(250,250,250));
         lblAnh.setBorder(BorderFactory.createLineBorder(new Color(230,230,230)));
         
-        // LOGIC ĐƯỜNG DẪN ĐÃ SỬA ĐỔI:
-        // 1. Giữ nguyên imagePath (VD: "monan.png")
-        // 2. Nối với tiền tố cố định "/src/image/"
-        // internalImagePath sẽ là: /src/image/monan.png
         String internalImagePath = "/image/" + imagePath;
         
         try {
-            // Tải ảnh từ Classpath
             URL imageUrl = getClass().getResource(internalImagePath);
             if (imageUrl != null) {
                 ImageIcon originalIcon = new ImageIcon(imageUrl);
@@ -272,7 +586,6 @@ public class GoiMon_GUI extends JPanel {
                 lblAnh.setIcon(new ImageIcon(scaledImage));
                 lblAnh.setHorizontalAlignment(SwingConstants.CENTER);
             } else {
-                // Hiển thị đường dẫn bị lỗi để tiện Debug
                 lblAnh.setText("Ảnh (Lỗi tìm: " + internalImagePath + ")"); 
                 lblAnh.setHorizontalAlignment(SwingConstants.CENTER);
             }
@@ -336,17 +649,10 @@ public class GoiMon_GUI extends JPanel {
         ));
 
         // --- KHU VỰC MÓN ĐANG GỌI (GIỎ HÀNG) ---
-        lblTieuDeDangGoi = new JLabel("Món đang gọi (0)");
-        lblTieuDeDangGoi.setFont(new Font("Arial", Font.BOLD, 16));
-        lblTieuDeDangGoi.setForeground(new Color(255, 140, 0));
-
         panel.add(lblTieuDeDangGoi);
         panel.add(Box.createVerticalStrut(8));
 
-        String[] cot = {"STT", "Tên món", "SL", "Giá", "Thao tác"};
-        modelMonDangGoi = new DefaultTableModel(cot, 0) {
-            public boolean isCellEditable(int r, int c) { return c == 4; }
-        };
+        // SỬ DỤNG MODEL ĐÃ KHỞI TẠO
         tblMonDangGoi = new JTable(modelMonDangGoi);
         tblMonDangGoi.setRowHeight(42);
         tblMonDangGoi.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -376,11 +682,12 @@ public class GoiMon_GUI extends JPanel {
         pnlSubTotal.setBackground(Color.WHITE);
         JLabel lblTxtSubTotal = new JLabel("Tổng tiền tạm tính");
         lblTxtSubTotal.setFont(new Font("Arial", Font.ITALIC, 13));
-        lblTongTienDangGoi = new JLabel(dinhDangTien.format(0) + " VND", SwingConstants.RIGHT); 
-        lblTongTienDangGoi.setFont(new Font("Arial", Font.BOLD, 14));
-        lblTongTienDangGoi.setForeground(new Color(255, 140, 0));
         pnlSubTotal.add(lblTxtSubTotal, BorderLayout.WEST);
         pnlSubTotal.add(lblTongTienDangGoi, BorderLayout.EAST);
+        
+        lblTongTienDangGoi.setFont(new Font("Arial", Font.BOLD, 14));
+        lblTongTienDangGoi.setForeground(new Color(255, 140, 0));
+        
         panel.add(pnlSubTotal);
         panel.add(Box.createVerticalStrut(10));
         // --- KẾT THÚC SUBTOTAL ---
@@ -424,16 +731,10 @@ public class GoiMon_GUI extends JPanel {
         panel.add(Box.createVerticalStrut(8));
 
         // --- KHU VỰC MÓN ĐÃ GỌI VÀ TỔNG TIỀN CỘNG DỒN ---
-        lblTieuDeDaGoi = new JLabel("Món đã gọi (0)");
-        lblTieuDeDaGoi.setFont(new Font("Arial", Font.BOLD, 16));
-        lblTieuDeDaGoi.setForeground(new Color(255, 140, 0));
         panel.add(lblTieuDeDaGoi);
         panel.add(Box.createVerticalStrut(8));
 
-        String[] cot2 = {"STT", "Tên món", "SL", "Giá"};
-        modelMonDaGoi = new DefaultTableModel(cot2, 0) {
-            public boolean isCellEditable(int r, int c) { return false; } 
-        };
+        // 💡 SỬ DỤNG MODEL ĐÃ KHỞI TẠO
         tblMonDaGoi = new JTable(modelMonDaGoi);
         tblMonDaGoi.setRowHeight(36);
         tblMonDaGoi.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -459,12 +760,13 @@ public class GoiMon_GUI extends JPanel {
         pnlTong.setBackground(Color.WHITE);
         JLabel lblTxtTong = new JLabel("Tổng tiền hóa đơn");
         lblTxtTong.setFont(new Font("Arial", Font.BOLD, 14));
-        lblTongTien = new JLabel(dinhDangTien.format(tongTienHoaDon) + " VND", SwingConstants.RIGHT); 
-        lblTongTien.setFont(new Font("Arial", Font.BOLD, 16));
-        lblTongTien.setForeground(new Color(220,53,69));
-
+        
         pnlTong.add(lblTxtTong, BorderLayout.WEST);
         pnlTong.add(lblTongTien, BorderLayout.EAST);
+        
+        lblTongTien.setFont(new Font("Arial", Font.BOLD, 16));
+        lblTongTien.setForeground(new Color(220,53,69));
+        
         panel.add(pnlTong);
         panel.add(Box.createVerticalStrut(10));
 
@@ -478,186 +780,11 @@ public class GoiMon_GUI extends JPanel {
 
         return panel;
     }
-
-    private void themVaoGio(String ten, int gia, int sl) {
-        if (gioHang.containsKey(ten))
-            gioHang.put(ten, gioHang.get(ten) + sl);
-        else
-            gioHang.put(ten, sl);
-        capNhatBangGio();
-        JOptionPane.showMessageDialog(this, "Đã thêm " + sl + " " + ten + " vào giỏ hàng");
-    }
-
-    private void capNhatBangGio() {
-        modelMonDangGoi.setRowCount(0);
-        int stt = 1;
-        tongTien = 0; 
-        for (Map.Entry<String, Integer> e : gioHang.entrySet()) {
-            String ten = e.getKey();
-            int sl = e.getValue();
-            // Lấy giá từ Map bangGia đã được load từ CSDL
-            int gia = bangGia.getOrDefault(ten, 0); 
-            modelMonDangGoi.addRow(new Object[]{stt++, ten, sl, dinhDangTien.format((long)gia * sl) + " VND", "Xóa"});
-            tongTien += (long)gia * sl;
-        }
-        
-        lblTongTienDangGoi.setText(dinhDangTien.format(tongTien) + " VND"); 
-        
-        lblTieuDeDangGoi.setText("Món đang gọi (" + gioHang.size() + ")");
-    }
-
-    private void xoaKhoiGio(String ten) {
-        gioHang.remove(ten);
-        capNhatBangGio();
-    }
     
-    private void huyDon() {
-        if (gioHang.isEmpty()) {
-             JOptionPane.showMessageDialog(this, "Giỏ hàng rỗng, không có gì để hủy.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-             return;
-        }
+// -------------------------------------------------------------------------
+// --- CÁC LỚP RENDERER VÀ MAIN --------------------------------------------
+// -------------------------------------------------------------------------
 
-        if (JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn hủy đơn đang gọi?", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-            gioHang.clear();
-            capNhatBangGio();
-            JOptionPane.showMessageDialog(this, "Đơn hàng đang gọi đã được hủy.");
-        }
-    }
-
-    private void xacNhanDon() {
-        if (gioHang.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Giỏ hàng rỗng, không có gì để xác nhận!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // 1. CỘNG DỒN DỮ LIỆU
-        for (Map.Entry<String, Integer> entry : gioHang.entrySet()) {
-            String ten = entry.getKey();
-            int slThem = entry.getValue();
-            
-            if (gioHangXacNhan.containsKey(ten)) {
-                gioHangXacNhan.put(ten, gioHangXacNhan.get(ten) + slThem);
-            } else {
-                gioHangXacNhan.put(ten, slThem);
-            }
-        }
-        
-        // 2. TÍNH TỔNG TIỀN CỘNG DỒN VÀ CẬP NHẬT BẢNG MÓN ĐÃ GỌI
-        modelMonDaGoi.setRowCount(0);
-        int stt = 1;
-        tongTienHoaDon = 0; 
-        
-        for (Map.Entry<String, Integer> e : gioHangXacNhan.entrySet()) {
-            String ten = e.getKey();
-            int sl = e.getValue();
-            if (bangGia.containsKey(ten)) {
-                 int gia = bangGia.get(ten);
-                 long thanhTien = (long)gia * sl;
-                 
-                 // Thêm món vào bảng Món đã gọi (chỉ còn 4 cột)
-                 modelMonDaGoi.addRow(new Object[]{stt++, ten, sl, dinhDangTien.format(thanhTien) + " VND"});
-                 tongTienHoaDon += thanhTien; 
-            }
-        }
-        lblTieuDeDaGoi.setText("Món đã gọi (" + gioHangXacNhan.size() + ")");
-
-
-        // 3. LÀM SẠCH GIỎ HÀNG ĐANG GỌI VÀ CẬP NHẬT TỔNG TIỀN CỘNG DỒN
-        gioHang.clear();
-        capNhatBangGio(); 
-        
-        lblTongTien.setText(dinhDangTien.format(tongTienHoaDon) + " VND");
-
-        // LÀM SẠCH Ô GHI CHÚ SAU KHI XÁC NHẬN
-        txtGhiChu.setText(""); 
-
-        JOptionPane.showMessageDialog(this, "Đã xác nhận đơn hàng! Các món đang gọi đã được gửi xuống bếp.");
-    }
-    
-    // =========================================================================
-    // === PHƯƠNG THỨC LÀM MỚI (MỚI THÊM) =====================================
-    // =========================================================================
-    /**
-     * Làm mới trạng thái GUI sau khi hóa đơn đã được thanh toán xong
-     */
-    public void lamMoiSauThanhToan() {
-        gioHangXacNhan.clear();
-        tongTienHoaDon = 0;
-        modelMonDaGoi.setRowCount(0);
-        lblTongTien.setText(dinhDangTien.format(tongTienHoaDon) + " VND");
-        lblTieuDeDaGoi.setText("Món đã gọi (0)");
-        
-        // Đảm bảo giỏ hàng đang gọi cũng rỗng (nếu chưa xác nhận)
-        gioHang.clear();
-        capNhatBangGio(); 
-        txtGhiChu.setText("");
-        
-        // Cần thông báo này để biết quá trình hiện lại trang đã thành công
-        // (Nếu không muốn thông báo, có thể xóa dòng này)
-        JOptionPane.showMessageDialog(this, "Hóa đơn đã được thanh toán và đơn hàng đã làm mới!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    // =========================================================================
-    // === PHƯƠNG THỨC THANH TOÁN (ĐÃ SỬA ĐỔI) ================================
-    // =========================================================================
-    /**
-     * Mở giao diện ThanhToan_Gui và truyền dữ liệu hóa đơn.
-     */
-    private void thanhToan() {
-        if (gioHangXacNhan.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Chưa có món nào được xác nhận để thanh toán!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // 1. Lấy cửa sổ chính (JFrame) đang chứa JPanel này
-        JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-        
-        if (parentFrame == null) {
-            JOptionPane.showMessageDialog(this, "Không tìm thấy cửa sổ cha để mở màn hình thanh toán.", "Lỗi hệ thống", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // 2. ẨN CỬA SỔ GỌI MÓN
-        parentFrame.setVisible(false);
-
-        // 3. TẠO VÀ CẤU HÌNH CỬA SỔ THANH TOÁN
-        JFrame thanhToanFrame = new JFrame("Thanh toán");
-        thanhToanFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
-        thanhToanFrame.setSize(1000, 750);
-        thanhToanFrame.setLocationRelativeTo(null);
-        
-        // Tham chiếu đến GUI hiện tại để gọi phương thức làm mới
-        GoiMon_GUI currentGui = this;
-
-        // 4. ĐÍNH KÈM WindowListener ĐỂ HIỆN LẠI CỬA SỔ GỌI MÓN
-        thanhToanFrame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosed(WindowEvent windowEvent) {
-                // HIỆN LẠI CỬA SỔ GỌI MÓN KHI CỬA SỔ THANH TOÁN ĐÓNG
-                parentFrame.setVisible(true);
-                parentFrame.toFront();
-                
-                // Xóa dữ liệu cũ sau khi thanh toán thành công
-                currentGui.lamMoiSauThanhToan(); 
-            }
-        });
-
-        try {
-            // KHỞI TẠO ThanhToan_Gui THỰC TẾ
-            // LƯU Ý: Phải đảm bảo ThanhToan_Gui đã được biên dịch và có constructor này
-            ThanhToan_GUI thanhToanPanel = new ThanhToan_GUI(gioHangXacNhan, bangGia, tongTienHoaDon);
-            thanhToanFrame.setContentPane(thanhToanPanel);
-            
-        } catch (Exception e) {
-             JOptionPane.showMessageDialog(this, "Lỗi khi khởi tạo màn hình Thanh toán: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-             parentFrame.setVisible(true); // Nếu lỗi, hiện lại cửa sổ cha ngay lập tức
-             return;
-        }
-
-        thanhToanFrame.setVisible(true);
-    }
-    // =========================================================================
-    
     class NutRenderer extends JButton implements TableCellRenderer {
         public NutRenderer(String text, Color color) {
             setText(text);
@@ -698,23 +825,23 @@ public class GoiMon_GUI extends JPanel {
         }
     }
 
-    public static void main(String[] args) throws SQLException {
-        // ⚠️ Mở kết nối trước khi khởi tạo GUI
-        ConnectDB.getConnection(); 
-
-        JFrame f = new JFrame("Gọi món");
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setSize(1200, 720);
-        f.setLocationRelativeTo(null);
-        f.setContentPane(new GoiMon_GUI());
-        f.setVisible(true);
-        
-        // ⚠️ Đóng kết nối khi ứng dụng thoát
-        f.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                ConnectDB.disconnect();
-            }
-        });
-    }
+//    public static void main(String[] args) throws SQLException {
+//        // ⚠️ Mở kết nối trước khi khởi tạo GUI
+//        ConnectDB.getConnection(); 
+//
+//        JFrame f = new JFrame("Gọi món");
+//        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        f.setSize(1200, 720);
+//        f.setLocationRelativeTo(null);
+//        f.setContentPane(new GoiMontest_GUI("B001"));
+//        f.setVisible(true);
+//        
+//        // ⚠️ Đóng kết nối khi ứng dụng thoát
+//        f.addWindowListener(new WindowAdapter() {
+//            @Override
+//            public void windowClosing(WindowEvent e) {
+//                ConnectDB.disconnect();
+//            }
+//        });
+//    }
 }

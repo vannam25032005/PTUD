@@ -3,6 +3,7 @@ package dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -172,4 +173,19 @@ public class KhuyenMai_DAO {
 		}
 		return dsKhuyenMai;
 	}
+	//7. Kiểm tra mã khuyến mãi
+	public boolean kiemTraMaKM(String maKM) throws SQLException {
+        if (maKM == null || maKM.trim().isEmpty()) return false;
+        Connection con = ConnectDB.getConnection();
+        String sql = "SELECT COUNT(*) FROM KHUYENMAI WHERE maKM = ?";
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, maKM);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }
