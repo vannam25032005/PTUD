@@ -13,9 +13,7 @@ import java.util.Map;
 
 public class BaoCao_DAO {
 
-    /**
-     * 1. Tính tổng doanh thu (Tổng cột TONGTIEN trong HOADON).
-     */
+    
     public double tinhTongDoanhThu(LocalDate tuNgay, LocalDate denNgay) {
         double tongDoanhThu = 0;
         
@@ -43,9 +41,7 @@ public class BaoCao_DAO {
         return tongDoanhThu;
     }
     
-    /**
-     * 2. Tính tổng tiền Đặt bàn (Tổng cột TONGTIEN với maDatBan IS NOT NULL).
-     */
+   
     public double tinhTongTienDatBan(LocalDate tuNgay, LocalDate denNgay) {
         double tongTienDatBan = 0;
 
@@ -73,9 +69,7 @@ public class BaoCao_DAO {
         return tongTienDatBan;
     }
 
-    /**
-     * 3. Tính tổng số lượng hóa đơn (Không thay đổi).
-     */
+   
     public int tinhTongSoLuongHoaDon(LocalDate tuNgay, LocalDate denNgay) {
         int soLuongHD = 0;
         
@@ -101,41 +95,92 @@ public class BaoCao_DAO {
         return soLuongHD;
     }
     
-    /**
-     * 4. Lấy Top Món Ăn Bán Chạy nhất (Sử dụng CT_HOADON).
-     */
+   
     public Map<MonAn, Integer> getTopMonAnBanChay(LocalDate tuNgay, LocalDate denNgay, int limit) {
         Map<MonAn, Integer> topMon = new LinkedHashMap<>();
 
         String sql = "SELECT m.maMon, m.tenMon, SUM(ct.soLuong) AS TotalQuantity " +
-                     "FROM CT_HOADON ct JOIN HOADON hd ON ct.maHD = hd.maHD " +
+                     "FROM CT_HOADON ct " +
+                     "JOIN HOADON hd ON ct.maHD = hd.maHD " +
                      "JOIN MONAN m ON ct.maMon = m.maMon " +
                      "WHERE hd.ngayLap >= ? AND hd.ngayLap < ? " + 
                      "GROUP BY m.maMon, m.tenMon " +
                      "ORDER BY TotalQuantity DESC " +
                      "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY"; 
 
+        // SỬA: Loại bỏ kiểm tra 'if (con == null)' dư thừa vì try-with-resources
         try (Connection con = ConnectDB.getConnection();
              PreparedStatement stmt = con.prepareStatement(sql)) {
             
-            if (con == null) return topMon;
+            // Chuyển đổi LocalDate sang java.sql.Date
+            java.sql.Date sqlTuNgay = java.sql.Date.valueOf(tuNgay);
+            // Ngày kết thúc: bao gồm cả ngày denNgay (đến 00:00:00 của ngày tiếp theo)
+            java.sql.Date sqlDenNgayTiepTheo = java.sql.Date.valueOf(denNgay.plusDays(1)); 
 
-            stmt.setDate(1, java.sql.Date.valueOf(tuNgay));
-            stmt.setDate(2, java.sql.Date.valueOf(denNgay.plusDays(1)));
+            stmt.setDate(1, sqlTuNgay);
+            stmt.setDate(2, sqlDenNgayTiepTheo);
             stmt.setInt(3, limit);
 
+            // Xử lý ResultSet an toàn
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    // Cần có constructor MonAn(String maMon, String tenMon)
-                    MonAn mon = new MonAn(rs.getString("maMon"), rs.getString("tenMon"));
+                    // Đảm bảo MonAn có constructor MonAn(String maMon, String tenMon)
+                    MonAn mon = new MonAn(rs.getString("maMon"), rs.getString("tenMon")); 
                     int soLuongBan = rs.getInt("TotalQuantity");
                     topMon.put(mon, soLuongBan);
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi SQL khi lấy Top Món Ăn Bán Chạy:");
+            // Nên sử dụng Logger hoặc ít nhất là print ra stderr rõ ràng
+            System.err.println("Lỗi SQL khi lấy Top Món Ăn Bán Chạy.");
             e.printStackTrace();
         }
         return topMon;
+    }
+
+    public Map<String, Double> getDoanhThuTheoNhom(LocalDate tuNgay, LocalDate denNgay, String groupType) {
+        Map<String, Double> doanhThu = new LinkedHashMap<>();
+        String selectCol;
+
+        // 1. Xác định format SQL Server cho nhóm
+        if (groupType.equals("Ngày")) {
+            // Hiển thị dạng YYYY-MM-DD
+            selectCol = "FORMAT(hd.ngayLap, 'yyyy-MM-dd')"; 
+        } else if (groupType.equals("Tháng")) {
+            // Hiển thị dạng YYYY-MM
+            selectCol = "FORMAT(hd.ngayLap, 'yyyy-MM')"; 
+        } else { // Năm
+            // Hiển thị dạng YYYY
+            selectCol = "FORMAT(hd.ngayLap, 'yyyy')"; 
+        }
+
+        String sql = "SELECT " + selectCol + " AS GroupKey, " +
+                     "SUM([tongTien]) AS TotalRevenue " +
+                     "FROM HOADON hd " +
+                     "WHERE hd.ngayLap >= ? AND hd.ngayLap < ? " +
+                     "GROUP BY " + selectCol +
+                     " ORDER BY GroupKey";
+
+        try (Connection con = ConnectDB.getConnection();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+
+            if (con == null) return doanhThu;
+
+            // Lọc đến hết ngày cuối cùng của khoảng
+            stmt.setDate(1, java.sql.Date.valueOf(tuNgay));
+            stmt.setDate(2, java.sql.Date.valueOf(denNgay.plusDays(1))); 
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String groupKey = rs.getString("GroupKey");
+                    double revenue = rs.getDouble("TotalRevenue");
+                    doanhThu.put(groupKey, revenue);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy Doanh Thu theo nhóm: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return doanhThu;
     }
 }

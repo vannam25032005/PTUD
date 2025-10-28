@@ -1,51 +1,69 @@
 package entity;
 
-import javax.management.RuntimeErrorException;
-
 public class Ban {
     private String maBan;
-    private int sucChua;
+    private String loaiBan; 
+    private int soGhe;
+    private String khuVuc; 
+    private String trangThai; 
 
-    public Ban(String maBan) {
-        super();
-        this.maBan = maBan;
+    // Constructors
+    public Ban(String maban) {
+    	this.maBan = maban;
     }
 
-    public Ban(String maBan, int sucChua) {
+    public Ban(String maBan, String loaiBan, int soGhe, String khuVuc, String trangThai) {
         this.maBan = maBan;
-        this.sucChua = sucChua;
+        this.loaiBan = loaiBan;
+        this.soGhe = soGhe;
+        this.khuVuc = khuVuc;
+        this.trangThai = trangThai;
     }
 
-    // Getters
-    public String getMaBan() { return maBan; }
-    public int getSucChua() { return sucChua; }
+    // Getters and Setters
+    public String getMaBan() {
+        return maBan;
+    }
 
-    // Setters
     public void setMaBan(String maBan) {
-        if(maBan == null || maBan.trim().length() == 0) throw new RuntimeException("Mã bàn không được rỗng");
         this.maBan = maBan;
     }
-    public void setSucChua(int sucChua) {
-        if(sucChua <= 0) throw new RuntimeException("Sức chứa phải lớn hơn 0");
-        this.sucChua = sucChua;
+
+    public String getLoaiBan() {
+        return loaiBan;
     }
 
-    // Equals và HashCode
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((maBan == null) ? 0 : maBan.hashCode());
-        return result;
+    public void setLoaiBan(String loaiBan) {
+        this.loaiBan = loaiBan;
     }
+
+    public int getSoGhe() {
+        return soGhe;
+    }
+
+    public void setSoGhe(int soGhe) {
+        this.soGhe = soGhe;
+    }
+
+    public String getKhuVuc() {
+        return khuVuc;
+    }
+
+    public void setKhuVuc(String khuVuc) {
+        this.khuVuc = khuVuc;
+    }
+
+    public String getTrangThai() {
+        return trangThai;
+    }
+
+    public void setTrangThai(String trangThai) {
+        this.trangThai = trangThai;
+    }
+
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Ban other = (Ban) obj;
-        if (maBan == null) {
-            if (other.maBan != null) return false;
-        } else if (!maBan.equals(other.maBan)) return false;
-        return true;
+    public String toString() {
+        return "Ban [maBan=" + maBan + ", loaiBan=" + loaiBan + ", soGhe=" + soGhe + ", khuVuc=" + khuVuc
+                + ", trangThai=" + trangThai + "]";
     }
 }

@@ -8,15 +8,15 @@ public class HoaDon {
     private String maHoaDon;
     private LocalDateTime ngayLap;
     
-    // Liên kết 1-* để tính tổng tiền
+    
     private List<CT_HoaDon> danhSachChiTietHoaDon; 
 
     // Khóa ngoại
-    private TheThanhVien theThanhVien; // maThe (Có thể NULL)
-    private NhanVien nhanVien;       // maNV (NOT NULL)
-    private Ban ban;                 // maBan (NOT NULL)
-    private BanDat banDat;           // maDatBan (Có thể NULL)
-    private KhuyenMai khuyenMai;     // maKM (Có thể NULL)
+    private TheThanhVien theThanhVien; 
+    private NhanVien nhanVien;      
+    private Ban ban;              
+    private BanDat banDat;        
+    private KhuyenMai khuyenMai;     
 
     public HoaDon(String maHoaDon) {
         super();
@@ -44,7 +44,7 @@ public class HoaDon {
     public BanDat getBanDat() { return banDat; }
     public KhuyenMai getKhuyenMai() { return khuyenMai; }
 
-    // PHƯƠNG THỨC TÍNH TOÁN: TỔNG TIỀN (totalPrice)
+  
     public double tinhTongTien() {
         if (danhSachChiTietHoaDon == null || danhSachChiTietHoaDon.isEmpty()) {
             return 0.0;
@@ -54,10 +54,10 @@ public class HoaDon {
             .mapToDouble(CT_HoaDon::tinhThanhTien)
             .sum();
 
-        // Lấy phần trăm giảm giá từ Khuyến mãi (nếu có)
+     
         double phanTramGiam = (khuyenMai != null) ? khuyenMai.getPhanTramGiam() : 0.0;
         
-        // Trả về tổng tiền đã trừ khuyến mãi
+       
         return tongChuaGiam * (1 - phanTramGiam);
     }
 

@@ -1,7 +1,7 @@
 package entity;
 
 import java.time.LocalDate;
-// Đã loại bỏ import java.sql.Date; (chỉ dùng LocalDate)
+
 
 public class KhuyenMai {
 	private String maKM;
@@ -9,11 +9,11 @@ public class KhuyenMai {
 	private String moTa;
 	private Double phanTramGiam;
 	
-	// Sửa kiểu dữ liệu từ java.sql.Date sang java.time.LocalDate
+	
 	private LocalDate ngayBatDau; 
 	private LocalDate ngayKetThuc;
 	
-	// Constructor đầy đủ tham số đã sửa kiểu Date
+	
 	public KhuyenMai(String maKM, String tenKM, String moTa, Double phanTramGiam, LocalDate ngayBatDau, LocalDate ngayKetThuc) {
 		super();
 		this.maKM = maKM;
@@ -24,13 +24,12 @@ public class KhuyenMai {
 		this.ngayKetThuc = ngayKetThuc;
 	}
 	
-	// Constructor mặc định (cần thiết cho một số framework)
 	public KhuyenMai(String maKM) {
 		super();
         this.maKM = maKM;
 	}
 	
-	// ======================== Getters and Setters ========================
+
 
 	public String getMaKM() {
 		return maKM;
@@ -75,7 +74,7 @@ public class KhuyenMai {
 		this.ngayKetThuc = ngayKetThuc;
 	}
 	
-	// Thêm phương thức toString() để tiện cho việc Debug
+
     @Override
     public String toString() {
         return "KhuyenMai [maKM=" + maKM + ", tenKM=" + tenKM + ", phanTramGiam=" + phanTramGiam 

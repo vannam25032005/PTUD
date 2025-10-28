@@ -4,6 +4,9 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+import dao.TaiKhoan_DAO;
+import entity.TaiKhoan;
+
 
 
 public class DangNhap_GUI extends JFrame implements ActionListener {
@@ -12,8 +15,7 @@ public class DangNhap_GUI extends JFrame implements ActionListener {
 	JLabel lblten, lblMatKhau;
 	JTextField txtTenDN;
 	JPasswordField txtMatKhau;
-	JButton btnDangNhap, btnXoaTrang;
-
+	JButton btnDangNhap, btnQMK;
 	public DangNhap_GUI() {
 		
 		setTitle("Đăng nhập");
@@ -62,7 +64,7 @@ public class DangNhap_GUI extends JFrame implements ActionListener {
 		pBody.add(pNut = Box.createHorizontalBox());
 		pNut.add(btnDangNhap = new JButton("Đăng nhập"));
 		pNut.add(Box.createHorizontalStrut(10));
-		pNut.add(btnXoaTrang = new JButton("Xoá trắng"));
+		pNut.add(btnQMK = new JButton("Quên mật khẩu"));
 
 		lblMatKhau.setPreferredSize(lblten.getPreferredSize());
 		txtTenDN.setPreferredSize(new Dimension(200, 25));
@@ -74,17 +76,17 @@ public class DangNhap_GUI extends JFrame implements ActionListener {
 		btnDangNhap.setBorderPainted(false);
 		btnDangNhap.setOpaque(true);
 
-		btnXoaTrang.setBackground(new Color(255, 178, 44));
-		btnXoaTrang.setForeground(Color.WHITE);
-		btnXoaTrang.setFocusPainted(false);
-		btnXoaTrang.setBorderPainted(false);
-		btnXoaTrang.setOpaque(true);
+		btnQMK.setBackground(new Color(255, 178, 44));
+		btnQMK.setForeground(Color.WHITE);
+		btnQMK.setFocusPainted(false);
+		btnQMK.setBorderPainted(false);
+		btnQMK.setOpaque(true);
 
 		JPanel pnlNoiDung = new JPanel(new FlowLayout(FlowLayout.CENTER));
 		pnlNoiDung.add(pBody);
 
 		btnDangNhap.addActionListener(this);
-		btnXoaTrang.addActionListener(this);
+		btnQMK.addActionListener(this);
 
 		add(pTieuDe, BorderLayout.NORTH);
 		add(pnlNoiDung, BorderLayout.CENTER);
@@ -104,22 +106,25 @@ public class DangNhap_GUI extends JFrame implements ActionListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		Object o = e.getSource();
-		if (o == btnDangNhap) {
-			new TrangChinh_Form();
-		}
-	
-		if (o == btnXoaTrang)
-			xoaTrangThongTin();
+	    Object o = e.getSource();
+
+	    if (o == btnDangNhap) {
+	    	TaiKhoan_DAO dao = new TaiKhoan_DAO();
+	        String user = txtTenDN.getText().trim();
+	        String pass = new String(txtMatKhau.getPassword());
+
+	        if (dao.dangNhap(user, pass)) {
+	            JOptionPane.showMessageDialog(this, "Đăng nhập thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+	            new TrangChinh_Form();
+	            this.dispose();
+	        } else {
+	            JOptionPane.showMessageDialog(this, "Tên đăng nhập hoặc mật khẩu không đúng, hoặc tài khoản đã khóa!", 
+	                                          "Đăng nhập thất bại", JOptionPane.ERROR_MESSAGE);
+	        }
+	    }
+
+	    if (o == btnQMK){
+	    	 new QuenMatKhau_GUI();
+	    }
 	}
-
-
-
-	public void xoaTrangThongTin() {
-		txtTenDN.setText("NV001");
-		txtMatKhau.setText("passA123");
-		txtTenDN.requestFocus();
-	}
-
-
 }

@@ -1,27 +1,28 @@
 package entity;
 
-import javax.management.RuntimeErrorException;
+import java.util.Objects;
 
 public class KhachHang {
     private String maKH;
     private String hoTenKH;
     private String soDienThoai;
-    private String email; // Chấp nhận NULL trong CSDL nhưng không rỗng
+    private String email;
     private boolean gioiTinh; 
-    private NhanVien nhanVien; // maNV
+    
+    public KhachHang() {
+    }
 
     public KhachHang(String maKH) {
-        super();
         this.maKH = maKH;
     }
 
-    public KhachHang(String maKH, String hoTenKH, String soDienThoai, String email, boolean gioiTinh, NhanVien nhanVien) {
+    
+    public KhachHang(String maKH, String hoTenKH, String soDienThoai, String email, boolean gioiTinh) {
         this.maKH = maKH;
         this.hoTenKH = hoTenKH;
         this.soDienThoai = soDienThoai;
         this.email = email;
         this.gioiTinh = gioiTinh;
-        this.nhanVien = nhanVien;
     }
 
     // Getters
@@ -30,48 +31,69 @@ public class KhachHang {
     public String getSoDienThoai() { return soDienThoai; }
     public String getEmail() { return email; }
     public boolean isGioiTinh() { return gioiTinh; }
-    public NhanVien getNhanVien() { return nhanVien; }
 
-    // Setters
+    // Setters với Validation
     public void setMaKH(String maKH) {
-        if(maKH == null || maKH.trim().length() == 0) throw new RuntimeException("Mã Khách hàng không được rỗng");
+        if (maKH == null || maKH.trim().isEmpty()) {
+         
+            throw new IllegalArgumentException("Mã khách hàng không được để trống.");
+        }
+     
+        if (!maKH.matches("^KH[0-9]{3}$")) {
+            throw new IllegalArgumentException("Mã khách hàng phải theo định dạng KHxxx (ví dụ: KH001).");
+        }
         this.maKH = maKH;
     }
+
     public void setHoTenKH(String hoTenKH) {
-        if(hoTenKH == null || hoTenKH.trim().length() == 0) throw new RuntimeException("Họ tên Khách hàng không được rỗng");
+        if (hoTenKH == null || hoTenKH.trim().isEmpty()) {
+            throw new IllegalArgumentException("Họ tên khách hàng không được để trống.");
+        }
         this.hoTenKH = hoTenKH;
     }
+
     public void setSoDienThoai(String soDienThoai) {
-        if(soDienThoai == null || soDienThoai.trim().length() == 0) throw new RuntimeException("Số điện thoại không được rỗng");
+        if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+            throw new IllegalArgumentException("Số điện thoại không được để trống.");
+        }
+    
+        if (!soDienThoai.matches("^(09|03)[0-9]{8}$")) {
+            throw new IllegalArgumentException("Số điện thoại phải có 10 chữ số và bắt đầu bằng 09 hoặc 03.");
+        }
         this.soDienThoai = soDienThoai;
     }
+
     public void setEmail(String email) {
-        // Chấp nhận email có thể NULL trong CSDL, chỉ kiểm tra không rỗng nếu khác NULL
-        if(email != null && email.trim().length() == 0) throw new RuntimeException("Email không được rỗng nếu có giá trị");
+   
+
         this.email = email; 
     }
-    public void setGioiTinh(boolean gioiTinh) { this.gioiTinh = gioiTinh; }
-    public void setNhanVien(NhanVien nhanVien) {
-        if(nhanVien == null) throw new RuntimeException("Phải có Nhân viên lập hồ sơ");
-        this.nhanVien = nhanVien;
+
+    public void setGioiTinh(boolean gioiTinh) {
+      
+        this.gioiTinh = gioiTinh; 
     }
+
 
     // Equals và HashCode
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((maKH == null) ? 0 : maKH.hashCode());
-        return result;
+        return Objects.hash(maKH);
     }
+
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
         KhachHang other = (KhachHang) obj;
-        if (maKH == null) {
-            if (other.maKH != null) return false;
-        } else if (!maKH.equals(other.maKH)) return false;
-        return true;
+        return Objects.equals(maKH, other.maKH);
+    }
+    
+    @Override
+    public String toString() {
+        return "KhachHang [maKH=" + maKH + ", hoTenKH=" + hoTenKH + ", soDienThoai=" + soDienThoai
+                + ", email=" + email + ", gioiTinh=" + gioiTinh + "]";
     }
 }

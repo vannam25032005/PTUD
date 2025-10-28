@@ -20,33 +20,20 @@ import connectDB.ConnectDB;
 
 public class KhuyenMai_GUI extends JPanel {
     
-    // ==================================================================================
-    // 1. KHAI BÁO CÁC THÀNH PHẦN
-    // ==================================================================================
     private static final long serialVersionUID = 1L;
-    
-    // Fields
     private JTextField txtMaKM, txtTenKM, txtMoTa, txtPhanTramGiam;
     private JDateChooser dcNgayBD, dcNgayKT; 
     private JTable table;
     private DefaultTableModel model;
     private JTextField txtTimKiem;
-    
-    // Buttons và ComboBox (Đã sửa lỗi khai báo cho btnXoaBoLoc)
     private JButton btnThem, btnSua, btnXoa, btnTim, btnXoaBoLoc; 
     private JComboBox<String> cboTrangThai; 
-    
-    // DAO và Hằng số
     private KhuyenMai_DAO khuyenMai_DAO;
     private static final DateTimeFormatter DATE_FORMATTER_GUI = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final int TEXTFIELD_HEIGHT = 40; 
 
-    // ==================================================================================
-    // 2. KHỞI TẠO VÀ CẤU TRÚC GIAO DIỆN
-    // ==================================================================================
 
     public KhuyenMai_GUI() {
-        // Khởi tạo kết nối CSDL và DAO
         try {
             ConnectDB.getInstance().connect();
         } catch (Exception e) {
@@ -61,7 +48,7 @@ public class KhuyenMai_GUI extends JPanel {
 
         // 1. TIÊU ĐỀ
         JLabel lblTitle = new JLabel("Quản Lý Khuyến Mãi");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 36));
         lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblTitle.setBorder(new EmptyBorder(0, 0, 15, 0));
         
@@ -106,9 +93,7 @@ public class KhuyenMai_GUI extends JPanel {
         btnXoa.setEnabled(false);
     }
     
-    // ==================================================================================
     // PHƯƠNG THỨC TẠO GIAO DIỆN CON
-    // ==================================================================================
     
     private JPanel createSearchAndFilterPanel() {
         JPanel pnl = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10)); 
@@ -199,9 +184,9 @@ public class KhuyenMai_GUI extends JPanel {
         return pnl;
     }
     
-    // ==================================================================================
+
     // PHƯƠNG THỨC CHUNG & HÀM HỖ TRỢ
-    // ==================================================================================
+  
     
     private JTextField createSizedTextField(int height) {
         JTextField textField = new JTextField(15);
@@ -235,7 +220,7 @@ public class KhuyenMai_GUI extends JPanel {
             TitledBorder.LEADING, 
             TitledBorder.TOP, 
             new Font("Segoe UI", Font.PLAIN, 12), 
-            Color.GRAY)); 
+            Color.BLACK)); 
             
         pnlField.add(component, BorderLayout.CENTER);
         parent.add(pnlField, gbc);
@@ -250,14 +235,11 @@ public class KhuyenMai_GUI extends JPanel {
         btn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
     }
     
-    // ==================================================================================
+
     // 3. LOGIC DỮ LIỆU VÀ SỰ KIỆN (LOAD/LỌC/CLICK)
-    // ==================================================================================
     
-    /**
-     * Tải dữ liệu vào bảng. Nếu danh sách truyền vào là null, tải toàn bộ từ DB.
-     * @param danhSachKM Danh sách khuyến mãi cần hiển thị
-     */
+    
+ 
     public void loadDataToTable(ArrayList<KhuyenMai> danhSachKM) {
         model.setRowCount(0); 
         
@@ -345,37 +327,26 @@ public class KhuyenMai_GUI extends JPanel {
         btnSua.addActionListener(e -> suaKhuyenMai());
         btnXoa.addActionListener(e -> xoaKhuyenMai());
         btnTim.addActionListener(e -> timKhuyenMai());
-        
-        // SỬA LỖI: Gán action listener trực tiếp cho btnXoaBoLoc
         if (btnXoaBoLoc != null) {
             btnXoaBoLoc.addActionListener(e -> lamMoiFormVaBang());
         }
-        
-        // THÊM CHỨC NĂNG: Lắng nghe sự kiện thay đổi của ComboBox trạng thái
+
         if (cboTrangThai != null) {
             cboTrangThai.addActionListener(e -> locKhuyenMaiTheoTrangThai());
         }
     }
     
-    /**
-     * Chức năng: Xóa trắng toàn bộ form nhập liệu, trường tìm kiếm, 
-     * reset bộ lọc và tải lại toàn bộ dữ liệu ra bảng.
-     */
     private void lamMoiFormVaBang() {
         xoaTrangForm();
-        
-        // Xóa trường tìm kiếm và reset bộ lọc
         txtTimKiem.setText(""); 
         if (cboTrangThai != null) {
-            cboTrangThai.setSelectedIndex(0); // Reset ComboBox về "Tất cả trạng thái"
+            cboTrangThai.setSelectedIndex(0); 
         }
         
-        loadDataToTable(); // Tải lại toàn bộ dữ liệu
+        loadDataToTable(); 
     }
 
-    /**
-     * Hàm hỗ trợ xóa trắng form nhập liệu và reset trạng thái nút
-     */
+ 
     private void xoaTrangForm() {
         txtMaKM.setText("");
         txtTenKM.setText("");
@@ -393,39 +364,29 @@ public class KhuyenMai_GUI extends JPanel {
         table.clearSelection();
     }
     
-    /**
-     * Chức năng: Lọc dữ liệu trong bảng dựa trên trạng thái được chọn trong ComboBox.
-     */
+ 
     private void locKhuyenMaiTheoTrangThai() {
         String selectedTrangThai = (String) cboTrangThai.getSelectedItem();
         
         if (selectedTrangThai == null || selectedTrangThai.equals("Tất cả trạng thái")) {
-            loadDataToTable(); // Tải lại toàn bộ nếu chọn "Tất cả"
+            loadDataToTable();
             return;
         }
-
-        // 1. Lấy toàn bộ danh sách KM
         ArrayList<KhuyenMai> allKM = khuyenMai_DAO.getAllKhuyenMai();
         ArrayList<KhuyenMai> filteredList = new ArrayList<>();
-        
-        // 2. Lọc danh sách
         for (KhuyenMai km : allKM) {
             String currentTrangThai = getTrangThai(km.getNgayBatDau(), km.getNgayKetThuc());
             if (currentTrangThai.equals(selectedTrangThai)) {
                 filteredList.add(km);
             }
         }
-        
-        // 3. Hiển thị danh sách đã lọc
         loadDataToTable(filteredList);
-        
-        // 4. Xóa trắng form nhập liệu để chuẩn bị cho thao tác mới
         xoaTrangForm(); 
     }
 
-    // ==================================================================================
+ 
     // 4. LOGIC CHỨC NĂNG (CRUD)
-    // ==================================================================================
+   
     
     private KhuyenMai layDuLieuTuForm() throws Exception {
         String ma = txtMaKM.getText().trim();
@@ -437,8 +398,6 @@ public class KhuyenMai_GUI extends JPanel {
         if (ma.isEmpty() || ten.isEmpty() || txtPhanTramGiam.getText().trim().isEmpty()) {
              throw new Exception("Vui lòng điền đầy đủ các trường bắt buộc (Mã, Tên, Giá trị).");
         }
-        
-        // LẤY VÀ KIỂM TRA NGÀY TỪ JDateChooser
         Date dateBD = dcNgayBD.getDate();
         Date dateKT = dcNgayKT.getDate();
         
@@ -448,8 +407,6 @@ public class KhuyenMai_GUI extends JPanel {
         
         ngayBD = dateBD.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         ngayKT = dateKT.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        
-        // KIỂM TRA GIÁ TRỊ GIẢM
         try {
              giaTri = Double.parseDouble(txtPhanTramGiam.getText().trim());
              if (giaTri < 0 || giaTri > 1) {
@@ -458,13 +415,11 @@ public class KhuyenMai_GUI extends JPanel {
         } catch (NumberFormatException e) {
              throw new Exception("Giá trị giảm không hợp lệ. Vui lòng nhập số thập phân (ví dụ: 0.1 cho 10%).");
         }
-        
-        // KIỂM TRA TÍNH HỢP LỆ CỦA KHOẢNG THỜI GIAN
+
         if (ngayBD.isAfter(ngayKT)) {
             throw new Exception("Ngày bắt đầu không thể sau Ngày kết thúc.");
         }
-        
-        // Dùng mã quản lý cứng QL001 (tùy thuộc vào thiết kế DB/Entity của bạn).
+
         String maQL = "QL001"; 
 
         return new KhuyenMai(ma, ten, moTa, giaTri, ngayBD, ngayKT);
@@ -543,21 +498,17 @@ public class KhuyenMai_GUI extends JPanel {
         if (danhSachKM.isEmpty()) {
              JOptionPane.showMessageDialog(this, "Không tìm thấy khuyến mãi nào phù hợp.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
         }
-        
-        // Reset ComboBox trạng thái sau khi tìm kiếm
         cboTrangThai.setSelectedIndex(0); 
     }
 
 
-    // ==================================================================================
-    // 5. PHƯƠNG THỨC MAIN (TEST)
-    // ==================================================================================
-    public static void main(String[] args) {
-        JFrame frame = new JFrame("Quản Lý Khuyến Mãi");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1200, 800);
-        frame.add(new KhuyenMai_GUI());
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
+
+//    public static void main(String[] args) {
+//        JFrame frame = new JFrame("Quản Lý Khuyến Mãi");
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.setSize(1200, 800);
+//        frame.add(new KhuyenMai_GUI());
+//        frame.setLocationRelativeTo(null);
+//        frame.setVisible(true);
+//    }
 }
