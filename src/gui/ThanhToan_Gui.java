@@ -76,6 +76,8 @@ public class ThanhToan_Gui extends JPanel {
     private String maBan;
     private NhanVien nhanVienHienTai;
     private String maHoaDon;
+    private LocalDateTime gioVao;
+    private LocalDateTime gioRa;
     
     
     public ThanhToan_Gui(Map<String, Integer> gioHangXacNhan, Map<String, Integer> bangGia, double tongTienHoaDon, double tienCoc2, String maBan, NhanVien nhanVien) {

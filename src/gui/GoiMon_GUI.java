@@ -8,6 +8,7 @@ import java.awt.event.*;
 import java.net.URL; 
 import java.sql.SQLException; 
 import java.text.NumberFormat;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -51,6 +52,7 @@ public class GoiMon_GUI extends JPanel {
     private List<MonAn> danhSachMonAn; 
     private List<MonAn> danhSachMonAnHienThi;
     private String maBanHienTai;
+    private LocalTime gioVao;
     private BanDat_DAO banDatDAO = new BanDat_DAO();
     private static final String[] COT_DANG_GOI = {"STT", "Tên món", "SL", "Giá", "Thao tác"};
     private static final String[] COT_DA_GOI = {"STT", "Tên món", "SL", "Giá"};
