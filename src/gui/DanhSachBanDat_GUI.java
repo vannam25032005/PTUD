@@ -453,7 +453,9 @@
 	        if (confirm != JOptionPane.YES_OPTION) {
 	            return;
 	        }
-	
+	        LocalTime gioVao = LocalTime.now();
+	        banDat.setGioCheckIn(gioVao);
+	        banDatDAO.updateGioCheckIn(maDatBan, gioVao);
 	        banDat.setTrangThai("Hoàn thành");
 	        if (!banDatDAO.updateBanDat(banDat)) {
 	            JOptionPane.showMessageDialog(this, "Lỗi cập nhật trạng thái đặt bàn sang 'Hoàn thành'.", "Lỗi CSDL", JOptionPane.ERROR_MESSAGE);

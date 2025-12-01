@@ -58,6 +58,12 @@ public class GoiMon_GUI extends JPanel {
     private static final String[] COT_DA_GOI = {"STT", "Tên món", "SL", "Giá"};
     public GoiMon_GUI(String maBan) throws SQLException {
         this.maBanHienTai = maBan; 
+        BanDat bd = banDatDAO.getBanDatDangSuDung(maBan); // Bạn có thể tạo hàm này
+        if (bd != null && bd.getGioCheckIn() != null) {
+            this.gioVao = bd.getGioCheckIn();
+        } else {
+            this.gioVao = LocalTime.now();
+        }
         
         dinhDangTien = NumberFormat.getInstance(new Locale("vi", "VN"));
 
@@ -384,7 +390,8 @@ public class GoiMon_GUI extends JPanel {
                 tongTienHoaDon,
                 tienCoc,
                 maBanHienTai,
-                DangNhap_GUI.taiKhoanDangNhap.getNhanVien()
+                DangNhap_GUI.taiKhoanDangNhap.getNhanVien(),
+                this.gioVao
             );
             thanhToanFrame.setContentPane(thanhToanPanel);
             

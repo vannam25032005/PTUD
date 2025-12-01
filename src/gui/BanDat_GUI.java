@@ -404,40 +404,93 @@ if ("Trống".equals(trangThai)) {
      */
     private void moGiaoDienGoiMon() {
         int selectedRow = tableBan.getSelectedRow();
-        
+
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, 
-                "Vui lòng chọn bàn trước khi gọi món!", 
-                "Chưa chọn bàn", 
-                JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn bàn trước khi gọi món!",
+                    "Chưa chọn bàn",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         String maBan = (String) modelBan.getValueAt(selectedRow, 0);
         String trangThaiBan = (String) modelBan.getValueAt(selectedRow, 4);
-        
-        // Kiểm tra trạng thái bàn
+
+        // ============================
+        //  TRƯỜNG HỢP BÀN ĐANG TRỐNG
+        // ============================
         if ("Trống".equals(trangThaiBan)) {
-            int confirm = JOptionPane.showConfirmDialog(this, 
-                "Bàn " + maBan + " đang trống. Bạn có muốn chuyển sang trạng thái 'Đang sử dụng' và gọi món không?", 
-                "Xác nhận", 
-                JOptionPane.YES_NO_OPTION);
-            
+
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Bàn " + maBan + " đang trống.\n"
+                  + "Bạn có muốn chuyển sang trạng thái 'Đang sử dụng' và bắt đầu gọi món không?",
+                    "Xác nhận",
+                    JOptionPane.YES_NO_OPTION);
+
             if (confirm == JOptionPane.YES_OPTION) {
-                // Cập nhật trạng thái bàn sang "Đang sử dụng"
-                capNhatTrangThaiBan(maBan, "Đang sử dụng");
+
+                try {
+                    // 1. Tạo mã đặt bàn
+                    String maDatBanMoi = banDatDAO.generateNewMaDatBan();
+
+                    // 2. Tạo khách hàng mặc định
+                    KhachHang kh = new KhachHang(null, "Khách lẻ", "0000000000", "", false);
+                    kh = khachHangDAO.themHoacLayKhachHang(kh);
+
+                    // 3. Lấy đối tượng bàn
+                    Ban banObj = banDAO.getBanById(maBan);
+                    LocalTime gioVao = LocalTime.now();
+
+                    // 4. Tạo bản ghi đặt bàn KHÔNG QUA VALIDATION GIỜ
+                    BanDat bdMoi = new BanDat(
+                            maDatBanMoi,
+                            kh,
+                            banObj,
+                            LocalDate.now(),
+                            LocalTime.now(),  // giờ đặt = giờ khách vào
+                            1,
+                            0,
+                            "Đang sử dụng",
+                            "Khách vào trực tiếp",
+                            gioVao
+                    );
+
+                    // ⛔ QUAN TRỌNG: GỌI HÀM CHUYÊN DÙNG CHO TRỰC TIẾP
+                    banDatDAO.addBanDatTrucTiep(bdMoi);
+
+                    // 5. Lưu giờ check-in
+                    banDatDAO.updateGioCheckIn(maDatBanMoi, gioVao);
+
+                    // 6. Cập nhật trạng thái bàn
+                    capNhatTrangThaiBan(maBan, "Đang sử dụng");
+
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                            "Lỗi tạo bản ghi đặt bàn khi khách vào trực tiếp:\n" + ex.getMessage(),
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // 7. Mở giao diện gọi món
                 chuyenSangGoiMon(maBan);
             }
-        } else if ("Đã đặt".equals(trangThaiBan) || "Đang sử dụng".equals(trangThaiBan)) {
-            // Cho phép gọi món với bàn đã đặt hoặc đang sử dụng
+
+            return;
+        }
+
+        // ============================
+        //  CÁC TRƯỜNG HỢP KHÁC
+        // ============================
+        if ("Đã đặt".equals(trangThaiBan) || "Đang sử dụng".equals(trangThaiBan)) {
             chuyenSangGoiMon(maBan);
         } else {
-            JOptionPane.showMessageDialog(this, 
-                "Không thể gọi món cho bàn có trạng thái: " + trangThaiBan, 
-                "Thông báo", 
-                JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Không thể gọi món cho bàn có trạng thái: " + trangThaiBan,
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
         }
     }
+
     
     /**
      * Chuyển sang giao diện gọi món
@@ -573,7 +626,8 @@ soNguoi = Integer.parseInt(txtSoNguoi.getText().trim());
             soNguoi, 
             tienCoc, 
             trangThai, 
-            ghiChu
+            ghiChu,
+            null
         );
 
         return banDat;
